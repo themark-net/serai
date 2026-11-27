@@ -273,6 +273,13 @@ fn build_serai_service(
     }
   }
 
+  /*
+    Spliced onto the shell comment above `cargo build`. Empty except on x86(-64), where it starts
+    with a newline. Defined on every architecture so this crate still compiles.
+  */
+  #[allow(unused_mut)]
+  let mut cc_flags = String::new();
+
   // x86(-64)-specific hardening
   #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
   {
@@ -282,6 +289,20 @@ fn build_serai_service(
       These are tracked within `rustc` with: https://github.com/rust-lang/rust/issues/116852
     */
     rustflags += " -Z retpoline";
+
+    /*
+      Intel CET (shadow stack and indirect branch tracking).
+
+      https://doc.rust-lang.org/beta/unstable-book/compiler-flags/cf-protection.html
+      https://github.com/serai-dex/serai/issues/738
+
+      `build-std` compiles the standard library with these `RUSTFLAGS`. C and C++ objects built
+      by the `cc` crate must carry the same protection, so `CFLAGS` and `CXXFLAGS` are exported
+      for that `cargo build`.
+    */
+    rustflags += " -Z cf-protection=full";
+    cc_flags.push_str("\n  export CFLAGS=\"$CFLAGS -fcf-protection=full\"\n");
+    cc_flags.push_str("  export CXXFLAGS=\"$CXXFLAGS -fcf-protection=full\"");
   }
 
   // AArch64-specific hardening.
@@ -415,7 +436,7 @@ RUN --mount=type=cache,from={image},source=/usr/local/rustup,target=/usr/local/r
   done
 
   # We disable `target-applies-to-host` due to Rust attempting weird `build-std`/sanitizer
-  # configurations for build scripts otherwise.
+  # configurations for build scripts otherwise.{cc_flags}
   RUSTFLAGS="$RUSTFLAGS {rustflags}"                                                            \
   cargo build --locked                                                                          \
     -Z target-applies-to-host --config "target-applies-to-host=false"                           \
