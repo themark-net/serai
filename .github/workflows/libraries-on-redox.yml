@@ -62,7 +62,7 @@ jobs:
           # GITHUB_PATH only applies to later steps. Export PATH in this
           # step too, or cargo/rustc are not found here.
           export CARGO_HOME RUSTUP_HOME
-          export PATH="$CARGO_HOME/bin:$PATH"
+          export PATH="$CARGO_HOME/bin:${PATH:-}"
           echo "CARGO_HOME=$CARGO_HOME" >> "$GITHUB_ENV"
           echo "RUSTUP_HOME=$RUSTUP_HOME" >> "$GITHUB_ENV"
           echo "$CARGO_HOME/bin" >> "$GITHUB_PATH"
@@ -108,15 +108,43 @@ jobs:
             if [ "$manifest" = "./common/db/Cargo.toml" ]; then
               FEATURES=""
             fi
+            # zalloc uses allocator_api, stable only in rustc 1.100+.
+            # redoxer 0.2.63 ships rustc 1.98.0-dev, so it cannot compile zalloc.
+            # No other crate in this job depends on zalloc.
+            if [ "$manifest" = "./common/zalloc/Cargo.toml" ]; then
+              echo "Skipping $manifest: allocator_api needs rustc 1.100; redoxer is 1.98.0-dev"
+              continue
+            fi
 
             # We apply optimizations as the time to emulate slow code is far
             # more than the time it to takes to output faster code
-            export RUSTFLAGS="$RUSTFLAGS -C opt-level=3"
+            export RUSTFLAGS="${RUSTFLAGS:-} -C opt-level=3"
             # Build the tests, without running them, and extract their absolute paths via `jq`
-            TESTS=$(redoxer test -- "$FEATURES" --manifest-path "$manifest" --no-run --message-format=json | jq -r '.executable | select(. != null)')
+            # redoxer 0.2.63 ships rustc 1.98.0-dev; zalloc on next requires 1.100.
+            TESTS=$(redoxer test -- "$FEATURES" --manifest-path "$manifest" --no-run --message-format=json --ignore-rust-version | jq -r '.executable | select(. != null)')
+            # An empty TESTS would be rewritten to /root by the sed below, so skip.
+            if [ -z "${TESTS}" ]; then
+              echo "No test executables for $manifest, skipping exec"
+              continue
+            fi
             # Convert our filesystem's absolute paths to what will be Redox's absolute paths
             TESTS=$(echo "$TESTS" | sed s/$(pwd | sed s/'\/'/'\\\/'/g)//g | sed s/'^'/'\/root'/g)
             echo "$TESTS" | while IFS="\n" read -r test; do
-              redoxer exec --folder '.:/root' "$test"
+              [ -n "$test" ] || continue
+              # The nimo-serai runner unit sets NoNewPrivileges=yes, which
+              # blocks setuid fusermount3. redoxer exec needs FUSE, so run
+              # only that command in a transient user unit without it.
+              if [ "${RUNNER_NAME:-}" = "nimo-serai" ]; then
+                systemd-run --user --wait --pipe --collect \
+                  --property=NoNewPrivileges=no \
+                  --unit="nimo-redoxer-exec-${GITHUB_RUN_ID:-$$}-${RANDOM}" \
+                  --working-directory="$PWD" \
+                  -E HOME -E PATH -E CARGO_HOME -E RUSTUP_HOME \
+                  -E TARGET -E REDOXER_QEMU_ARGS -E RUSTFLAGS \
+                  -E RUST_BACKTRACE -E GITHUB_CI -E RUNNER_NAME \
+                  -- redoxer exec --folder '.:/root' "$test"
+              else
+                redoxer exec --folder '.:/root' "$test"
+              fi
             done
           done
