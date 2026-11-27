@@ -7,6 +7,14 @@ const COMPILATION_FLAGS: &str =
   "-DCMAKE_BUILD_TYPE=Release -DMI_OPT_ARCH=ON -DMI_OVERRIDE=ON -DMI_STATS=OFF -DMI_PROFILE=OFF -DMI_BUILD_SHARED=ON -DMI_BUILD_STATIC=OFF -DMI_BUILD_OBJECT=OFF -DMI_BUILD_TESTS=OFF";
 
 pub fn mimalloc(os: Os, release: bool) -> String {
+  /*
+    `-fcf-protection=full` is x86-only. gcc and clang reject or ignore it on other architectures.
+  */
+  #[allow(unused_mut)]
+  let mut cflags = "-O2 -fPIC -fstack-protector-strong -fstack-clash-protection".to_owned();
+  #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+  cflags.push_str(" -fcf-protection=full");
+
   let build_script = |env, additional_flags| {
     let flags = format!("{HARDENING_FLAGS} {COMPILATION_FLAGS} {additional_flags}");
     format!(
@@ -24,7 +32,7 @@ RUN <<-'EOF'
   mkdir -p out
   cd out
 
-  export CFLAGS="$CFLAGS -O2 -fPIC -fstack-protector-strong -fstack-clash-protection"
+  export CFLAGS="$CFLAGS {cflags}"
 
   {env} cmake {flags} ..
   make
