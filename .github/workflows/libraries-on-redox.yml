@@ -1,3 +1,7 @@
+# Fork-only. Do not merge this file to next or develop.
+# This branch points the job at the nimo-serai self-hosted runner, skips the
+# sudo apt/udev steps (nimo already has qemu, jq, and writable /dev/kvm), and
+# keeps the redoxer install and test steps.
 name: Test Libraries on Redox
 permissions: {}
 
@@ -6,10 +10,12 @@ on:
     branches:
       - develop
       - next
+      - bot/ci-nimo-redox
     paths:
       - "common/**"
       - "crypto/**"
       - "coordinator/tributary-framework/tendermint/*"
+      - ".github/workflows/libraries-on-redox.yml"
 
   pull_request:
     paths:
@@ -22,7 +28,7 @@ on:
 jobs:
   test-redox:
     name: Test Libraries on Redox
-    runs-on: ubuntu-24.04
+    runs-on: nimo-serai
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
@@ -30,25 +36,56 @@ jobs:
           persist-credentials: false
 
       - name: Install QEMU
+        if: runner.name != 'nimo-serai'
         run: sudo apt update -y && sudo apt upgrade -y && sudo apt install -y qemu-system-x86 jq
 
       - name: Enable KVM
+        if: runner.name != 'nimo-serai'
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+
+      # nimo has no rust on the default PATH. Reuse the existing user rustup
+      # under ~/DEVELOP/serai/tmp so we do not install a second copy into
+      # ~/.rustup. no-cache below skips musl static linking (musl-tools is
+      # not installed) and the action's ~/.cargo/bin check.
+      - name: Put user Rust on PATH (nimo)
+        if: runner.name == 'nimo-serai'
+        shell: bash
+        run: |
+          set -euo pipefail
+          CARGO_HOME=/home/mark/DEVELOP/serai/tmp/cargo-home
+          RUSTUP_HOME=/home/mark/DEVELOP/serai/tmp/rustup-home
+          test -x "$CARGO_HOME/bin/cargo"
+          test -x "$CARGO_HOME/bin/rustup"
+          echo "CARGO_HOME=$CARGO_HOME" >> "$GITHUB_ENV"
+          echo "RUSTUP_HOME=$RUSTUP_HOME" >> "$GITHUB_ENV"
+          echo "$CARGO_HOME/bin" >> "$GITHUB_PATH"
+          cargo +1.100 --version
+          rustc +1.100 --version
 
       - name: Install `redoxer`
         uses: ./.github/actions/cargo-install
         with:
           crate: redoxer
           version: 0.2.63
+          no-cache: true
 
       - name: Run Tests for Libraries on Redoxer
         shell: bash
         run: |
+          set -euo pipefail
           export GITHUB_CI=true
           export RUST_BACKTRACE=1
+
+          # redoxer 0.2.63 always installs under $HOME/.redoxer/<target>.
+          # Keep that tree inside ~/DEVELOP so nothing is written to
+          # /home/mark/.redoxer. CARGO_HOME and RUSTUP_HOME stay absolute.
+          if [ "${RUNNER_NAME:-}" = "nimo-serai" ]; then
+            export HOME=/home/mark/DEVELOP/serai/tmp/redoxer-home
+            mkdir -p "$HOME"
+          fi
 
           ACCEL="kvm"
           if [ ! -w /dev/kvm ]; then
