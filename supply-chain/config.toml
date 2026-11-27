@@ -1464,7 +1464,7 @@ version = "12.0.0@git:56b84bbe82ae708bb326c7f92a4e217b99cd03ab"
 criteria = "safe-to-deploy"
 
 [[exemptions.form_urlencoded]]
-version = "1.2.2"
+version = "1.2.3"
 criteria = "safe-to-deploy"
 
 [[exemptions.forwarded-header-value]]
@@ -3251,7 +3251,7 @@ version = "0.9.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.url]]
-version = "2.5.8"
+version = "2.5.9"
 criteria = "safe-to-deploy"
 
 [[exemptions.utf8_iter]]
