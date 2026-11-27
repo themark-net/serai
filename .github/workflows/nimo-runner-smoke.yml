@@ -1,0 +1,33 @@
+# Fork-only smoke test for the nimo self-hosted runner.
+# Triggers only on this branch. Do not merge to next or develop.
+# The runner is registered with label nimo-serai and no default labels.
+name: nimo runner smoke
+permissions: {}
+
+on:
+  push:
+    branches:
+      - bot/ci-nimo
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: nimo-serai smoke
+    runs-on: nimo-serai
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Prove runner identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          hostname
+          uname -a
+          id
+          echo "repo=${GITHUB_REPOSITORY} ref=${GITHUB_REF} run=${GITHUB_RUN_ID}"
+          command -v docker
+          docker version --format '{{.Server.Version}}'
+          test -f README.md
+          echo "nimo-serai smoke ok"
