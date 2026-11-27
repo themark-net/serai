@@ -59,6 +59,10 @@ jobs:
           RUSTUP_HOME=/home/mark/DEVELOP/serai/tmp/rustup-home
           test -x "$CARGO_HOME/bin/cargo"
           test -x "$CARGO_HOME/bin/rustup"
+          # GITHUB_PATH only applies to later steps. Export PATH in this
+          # step too, or cargo/rustc are not found here.
+          export CARGO_HOME RUSTUP_HOME
+          export PATH="$CARGO_HOME/bin:$PATH"
           echo "CARGO_HOME=$CARGO_HOME" >> "$GITHUB_ENV"
           echo "RUSTUP_HOME=$RUSTUP_HOME" >> "$GITHUB_ENV"
           echo "$CARGO_HOME/bin" >> "$GITHUB_PATH"
