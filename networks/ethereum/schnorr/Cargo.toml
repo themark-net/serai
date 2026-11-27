@@ -1,0 +1,49 @@
+[package]
+name = "ethereum-schnorr-contract"
+version = "0.1.0"
+description = "A Solidity contract to verify Schnorr signatures"
+license = "AGPL-3.0-only"
+repository = "https://github.com/serai-dex/serai/tree/develop/networks/ethereum/schnorr"
+authors = ["Luke Parker <lukeparker5132@gmail.com>", "Elizabeth Binks <elizabethjbinks@gmail.com>"]
+edition = "2024"
+rust-version = "1.85"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true
+
+[dependencies]
+std-shims = { path = "../../../common/std-shims", version = "0.1", default-features = false }
+
+subtle = { version = "2", default-features = false }
+sha3 = { version = "0.12", default-features = false }
+group = { version = "0.13", default-features = false }
+k256 = { version = "0.13.1", default-features = false, features = ["arithmetic"] }
+
+[build-dependencies]
+build-solidity-contracts = { path = "../build-contracts", version = "0.1" }
+
+[dev-dependencies]
+rand_core = { version = "0.6", default-features = false, features = ["std"] }
+
+k256 = { version = "0.13.1", default-features = false, features = ["ecdsa"] }
+
+alloy-core = { version = "1", default-features = false }
+alloy-sol-types = { version = "1", default-features = false }
+
+alloy-simple-request-transport = { path = "../alloy-simple-request-transport", default-features = false }
+alloy-rpc-types-eth = { version = "2", default-features = false }
+alloy-rpc-client = { version = "2", default-features = false }
+alloy-provider = { version = "2", default-features = false }
+
+alloy-node-bindings = { version = "2", default-features = false }
+
+tokio = { version = "1", default-features = false, features = ["macros"] }
+
+[features]
+alloc = ["std-shims/alloc", "sha3/alloc", "group/alloc"]
+std = ["alloc", "std-shims/std", "subtle/std", "k256/std"]
+default = ["std"]

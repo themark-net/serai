@@ -10,10 +10,9 @@ use blake2::{
   digest::{consts::U32, Digest},
   Blake2b,
 };
-
-use dalek_ff_group::Ristretto;
-use ciphersuite::{group::GroupEncoding, Ciphersuite};
+use ciphersuite::{group::GroupEncoding, WrappedGroup}
 use ciphersuite_kp256::Secp256k1;
+use dalek_ff_group::Ristretto;
 use dkg::Participant;
 
 use scale::Encode;
@@ -37,7 +36,7 @@ pub async fn batch(
   processors: &mut [Processor],
   processor_is: &[u8],
   session: Session,
-  substrate_key: &Zeroizing<<Ristretto as Ciphersuite>::F>,
+  substrate_key: &Zeroizing<<Ristretto as WrappedGroup>::F>,
   batch: Batch,
 ) -> u64 {
   let id = SubstrateSignId { session, id: SubstrateSignableId::Batch(batch.id), attempt: 0 };
@@ -165,12 +164,14 @@ pub async fn batch(
   schnorrkel_key_pair[.. 32].copy_from_slice(&substrate_key.to_repr());
   OsRng.fill_bytes(&mut schnorrkel_key_pair[32 .. 64]);
   schnorrkel_key_pair[64 ..]
-    .copy_from_slice(&(<Ristretto as Ciphersuite>::generator() * **substrate_key).to_bytes());
-  let signature = schnorrkel::keys::Keypair::from_bytes(&schnorrkel_key_pair)
-    .unwrap()
-    .sign_simple(b"substrate", &batch_message(&batch))
-    .to_bytes()
-    .into();
+    .copy_from_slice(&(<Ristretto as WrappedGroup>::generator() * **substrate_key).to_bytes());
+  let signature = Signature(
+    schnorrkel::keys::Keypair::from_bytes(&schnorrkel_key_pair)
+      .unwrap()
+      .sign_simple(b"substrate", &batch_message(&batch))
+      .to_bytes()
+      .into(),
+  );
 
   let batch = SignedBatch { batch, signature };
 
@@ -189,7 +190,7 @@ pub async fn batch(
   // Verify the Batch was published to Substrate
   'outer: for _ in 0 .. 20 {
     tokio::time::sleep(Duration::from_secs(6)).await;
-    if std::env::var("GITHUB_CI") == Ok("true".to_string()) {
+    if std::env::var("GITHUB_CI") == Ok("true".to_owned()) {
       tokio::time::sleep(Duration::from_secs(6)).await;
     }
 
@@ -263,7 +264,7 @@ pub async fn batch(
 #[tokio::test]
 async fn batch_test() {
   new_test(
-    |mut processors: Vec<Processor>| async move {
+    async move |mut processors: Vec<Processor>| {
       // pop the last participant since genesis keygen has only 4 participants
       processors.pop().unwrap();
       assert_eq!(processors.len(), COORDINATORS);

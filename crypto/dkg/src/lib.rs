@@ -1,43 +1,49 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
-#![cfg_attr(not(feature = "std"), no_std)]
+#![deny(missing_docs)]
+#![no_std]
 
 use core::{
-  ops::Deref,
+  ops::Deref as _,
   fmt::{self, Debug},
 };
-#[allow(unused_imports)]
-use std_shims::prelude::*;
-use std_shims::{sync::Arc, vec, vec::Vec, collections::HashMap, io};
+use std_shims::{prelude::*, sync::Arc, collections::HashMap, io};
 
 use zeroize::{Zeroize, Zeroizing};
 
 use ciphersuite::{
   group::{
-    ff::{Field, PrimeField},
-    GroupEncoding,
+    ff::{Field as _, PrimeField},
+    GroupEncoding as _,
   },
-  Ciphersuite,
+  GroupIo,
 };
 
 /// The ID of a participant, defined as a non-zero u16.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Zeroize)]
-#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize))]
 pub struct Participant(u16);
 impl Participant {
   /// Create a new Participant identifier from a u16.
   pub const fn new(i: u16) -> Option<Participant> {
-    if i == 0 {
-      None
-    } else {
-      Some(Participant(i))
-    }
+    if i == 0 { None } else { Some(Participant(i)) }
   }
 
   /// Convert a Participant identifier to bytes.
-  #[allow(clippy::wrong_self_convention)]
   pub const fn to_bytes(&self) -> [u8; 2] {
     self.0.to_le_bytes()
+  }
+
+  /// Create an iterator over participant indexes.
+  pub fn iter() -> impl Iterator<Item = Participant> {
+    struct ParticipantIterator(u16);
+    impl Iterator for ParticipantIterator {
+      type Item = Participant;
+      fn next(&mut self) -> Option<Self::Item> {
+        self.0 = self.0.checked_add(1)?;
+        Some(Participant(self.0))
+      }
+    }
+    ParticipantIterator(0)
   }
 }
 
@@ -116,18 +122,8 @@ pub enum DkgError {
   NotParticipating,
 }
 
-// Manually implements BorshDeserialize so we can enforce it's a valid index
-#[cfg(feature = "borsh")]
-impl borsh::BorshDeserialize for Participant {
-  fn deserialize_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
-    Participant::new(u16::deserialize_reader(reader)?)
-      .ok_or_else(|| io::Error::other("invalid participant"))
-  }
-}
-
 /// Parameters for a multisig.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Zeroize)]
-#[cfg_attr(feature = "borsh", derive(borsh::BorshSerialize))]
 pub struct ThresholdParams {
   /// Participants needed to sign on behalf of the group.
   t: u16,
@@ -197,16 +193,6 @@ impl ThresholdParams {
   }
 }
 
-#[cfg(feature = "borsh")]
-impl borsh::BorshDeserialize for ThresholdParams {
-  fn deserialize_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
-    let t = u16::deserialize_reader(reader)?;
-    let n = u16::deserialize_reader(reader)?;
-    let i = Participant::deserialize_reader(reader)?;
-    ThresholdParams::new(t, n, i).map_err(|e| io::Error::other(format!("{e:?}")))
-  }
-}
-
 /// A method of interpolation.
 #[derive(Clone, PartialEq, Eq, Debug, Zeroize)]
 pub enum Interpolation<F: Zeroize + PrimeField> {
@@ -222,7 +208,10 @@ pub enum Interpolation<F: Zeroize + PrimeField> {
 }
 
 impl<F: Zeroize + PrimeField> Interpolation<F> {
-  /// The interpolation factor for this participant, within this signing set.
+  /// The interpolation factor for this participant, for the included set of participants.
+  ///
+  /// This MAY panic or return an undefined value for inapplicable choices of `i`, `included` (such
+  /// as a non-existent `i` or a included set of size less than the threshold).
   fn interpolation_factor(&self, i: Participant, included: &[Participant]) -> F {
     match self {
       Interpolation::Constant(c) => c[usize::from(u16::from(i) - 1)],
@@ -255,7 +244,7 @@ impl<F: Zeroize + PrimeField> Interpolation<F> {
 /// heap-allocated pointer to minimize copies on the stack (`ThresholdKeys`, the publicly exposed
 /// type).
 #[derive(Clone, PartialEq, Eq)]
-struct ThresholdCore<C: Ciphersuite> {
+struct ThresholdCore<C: GroupIo> {
   params: ThresholdParams,
   group_key: C::G,
   verification_shares: HashMap<Participant, C::G>,
@@ -263,7 +252,7 @@ struct ThresholdCore<C: Ciphersuite> {
   secret_share: Zeroizing<C::F>,
 }
 
-impl<C: Ciphersuite> fmt::Debug for ThresholdCore<C> {
+impl<C: GroupIo> fmt::Debug for ThresholdCore<C> {
   fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
     fmt
       .debug_struct("ThresholdCore")
@@ -275,21 +264,23 @@ impl<C: Ciphersuite> fmt::Debug for ThresholdCore<C> {
   }
 }
 
-impl<C: Ciphersuite> Zeroize for ThresholdCore<C> {
+impl<C: GroupIo> Zeroize for ThresholdCore<C> {
   fn zeroize(&mut self) {
-    self.params.zeroize();
-    self.group_key.zeroize();
-    for share in self.verification_shares.values_mut() {
+    let Self { params, group_key, verification_shares, interpolation, secret_share } = self;
+
+    params.zeroize();
+    group_key.zeroize();
+    for share in verification_shares.values_mut() {
       share.zeroize();
     }
-    self.interpolation.zeroize();
-    self.secret_share.zeroize();
+    interpolation.zeroize();
+    secret_share.zeroize();
   }
 }
 
 /// Threshold keys usable for signing.
 #[derive(Clone, Debug, Zeroize)]
-pub struct ThresholdKeys<C: Ciphersuite> {
+pub struct ThresholdKeys<C: GroupIo> {
   // Core keys.
   #[zeroize(skip)]
   core: Arc<Zeroizing<ThresholdCore<C>>>,
@@ -302,7 +293,7 @@ pub struct ThresholdKeys<C: Ciphersuite> {
 
 /// View of keys, interpolated and with the expected linear combination taken for usage.
 #[derive(Clone)]
-pub struct ThresholdView<C: Ciphersuite> {
+pub struct ThresholdView<C: GroupIo> {
   interpolation: Interpolation<C::F>,
   scalar: C::F,
   offset: C::F,
@@ -313,7 +304,7 @@ pub struct ThresholdView<C: Ciphersuite> {
   verification_shares: HashMap<Participant, C::G>,
 }
 
-impl<C: Ciphersuite> fmt::Debug for ThresholdView<C> {
+impl<C: GroupIo> fmt::Debug for ThresholdView<C> {
   fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
     fmt
       .debug_struct("ThresholdView")
@@ -328,23 +319,35 @@ impl<C: Ciphersuite> fmt::Debug for ThresholdView<C> {
   }
 }
 
-impl<C: Ciphersuite> Zeroize for ThresholdView<C> {
+impl<C: GroupIo> Zeroize for ThresholdView<C> {
   fn zeroize(&mut self) {
-    self.scalar.zeroize();
-    self.offset.zeroize();
-    self.group_key.zeroize();
-    self.included.zeroize();
-    self.secret_share.zeroize();
-    for share in self.original_verification_shares.values_mut() {
+    let Self {
+      interpolation,
+      scalar,
+      offset,
+      group_key,
+      included,
+      secret_share,
+      original_verification_shares,
+      verification_shares,
+    } = self;
+
+    interpolation.zeroize();
+    scalar.zeroize();
+    offset.zeroize();
+    group_key.zeroize();
+    included.zeroize();
+    secret_share.zeroize();
+    for share in original_verification_shares.values_mut() {
       share.zeroize();
     }
-    for share in self.verification_shares.values_mut() {
+    for share in verification_shares.values_mut() {
       share.zeroize();
     }
   }
 }
 
-impl<C: Ciphersuite> ThresholdKeys<C> {
+impl<C: GroupIo> ThresholdKeys<C> {
   /// Create a new set of ThresholdKeys.
   pub fn new(
     params: ThresholdParams,
@@ -365,15 +368,20 @@ impl<C: Ciphersuite> ThresholdKeys<C> {
     }
 
     match &interpolation {
-      Interpolation::Constant(_) => {
+      Interpolation::Constant(factors) => {
         if params.t() != params.n() {
           Err(DkgError::InapplicableInterpolation("constant interpolation for keys where t != n"))?;
+        }
+        if factors.len() != usize::from(params.n()) {
+          Err(DkgError::InapplicableInterpolation(
+            "constant interpolation for a different amount of participants than present",
+          ))?;
         }
       }
       Interpolation::Lagrange => {}
     }
 
-    let t = (1 ..= params.t()).map(Participant).collect::<Vec<_>>();
+    let t = Participant::iter().take(usize::from(params.t())).collect::<Vec<_>>();
     let group_key =
       t.iter().map(|i| verification_shares[i] * interpolation.interpolation_factor(*i, &t)).sum();
 
@@ -536,8 +544,6 @@ impl<C: Ciphersuite> ThresholdKeys<C> {
   ///
   /// This will not include the ephemeral scalar/offset.
   pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
-    writer.write_all(&u32::try_from(C::ID.len()).unwrap().to_le_bytes())?;
-    writer.write_all(C::ID)?;
     writer.write_all(&self.core.params.t.to_le_bytes())?;
     writer.write_all(&self.core.params.n.to_le_bytes())?;
     writer.write_all(&self.core.params.i.to_bytes())?;
@@ -549,7 +555,7 @@ impl<C: Ciphersuite> ThresholdKeys<C> {
         }
       }
       Interpolation::Lagrange => writer.write_all(&[1])?,
-    };
+    }
     let mut share_bytes = self.core.secret_share.to_repr();
     writer.write_all(share_bytes.as_ref())?;
     share_bytes.as_mut().zeroize();
@@ -571,23 +577,10 @@ impl<C: Ciphersuite> ThresholdKeys<C> {
   }
 
   /// Read keys from a type satisfying `std::io::Read`.
-  pub fn read<R: io::Read>(reader: &mut R) -> io::Result<ThresholdKeys<C>> {
-    {
-      let different = || io::Error::other("deserializing ThresholdKeys for another curve");
-
-      let mut id_len = [0; 4];
-      reader.read_exact(&mut id_len)?;
-      if u32::try_from(C::ID.len()).unwrap().to_le_bytes() != id_len {
-        Err(different())?;
-      }
-
-      let mut id = vec![0; C::ID.len()];
-      reader.read_exact(&mut id)?;
-      if id != C::ID {
-        Err(different())?;
-      }
-    }
-
+  ///
+  /// This will check the contained values are syntactically valid but does not enforce any actual
+  /// relationship nor the consistency of these values.
+  pub fn read(mut reader: impl io::Read) -> io::Result<ThresholdKeys<C>> {
     let (t, n, i) = {
       let mut read_u16 = || -> io::Result<u16> {
         let mut value = [0; 2];
@@ -601,13 +594,13 @@ impl<C: Ciphersuite> ThresholdKeys<C> {
       )
     };
 
-    let mut interpolation = [0];
+    let mut interpolation = [0xff];
     reader.read_exact(&mut interpolation)?;
     let interpolation = match interpolation[0] {
       0 => Interpolation::Constant({
         let mut res = Vec::with_capacity(usize::from(n));
         for _ in 0 .. n {
-          res.push(C::read_F(reader)?);
+          res.push(C::read_F(&mut reader)?);
         }
         res
       }),
@@ -615,11 +608,11 @@ impl<C: Ciphersuite> ThresholdKeys<C> {
       _ => Err(io::Error::other("invalid interpolation method"))?,
     };
 
-    let secret_share = Zeroizing::new(C::read_F(reader)?);
+    let secret_share = Zeroizing::new(C::read_F(&mut reader)?);
 
     let mut verification_shares = HashMap::new();
-    for l in (1 ..= n).map(Participant) {
-      verification_shares.insert(l, <C as Ciphersuite>::read_G(reader)?);
+    for l in Participant::iter().take(usize::from(n)) {
+      verification_shares.insert(l, C::read_G(&mut reader)?);
     }
 
     ThresholdKeys::new(
@@ -632,7 +625,7 @@ impl<C: Ciphersuite> ThresholdKeys<C> {
   }
 }
 
-impl<C: Ciphersuite> ThresholdView<C> {
+impl<C: GroupIo> ThresholdView<C> {
   /// Return the scalar applied to this view.
   pub fn scalar(&self) -> C::F {
     self.scalar
@@ -656,7 +649,7 @@ impl<C: Ciphersuite> ThresholdView<C> {
   /// Return the interpolation factor for a signer.
   pub fn interpolation_factor(&self, participant: Participant) -> Option<C::F> {
     if !self.included.contains(&participant) {
-      None?
+      None?;
     }
     Some(self.interpolation.interpolation_factor(participant, &self.included))
   }

@@ -6,7 +6,7 @@ license = "AGPL-3.0-only"
 repository = "https://github.com/serai-dex/serai/tree/develop/tests/full-stack"
 authors = ["Luke Parker <lukeparker5132@gmail.com>"]
 keywords = []
-edition = "2021"
+edition = "2024"
 publish = false
 
 [package.metadata.docs.rs]
@@ -19,22 +19,20 @@ workspace = true
 [dependencies]
 hex = "0.4"
 
-async-trait = "0.1"
-
 zeroize = { version = "1", default-features = false }
 rand_core = { version = "0.6", default-features = false }
 
-curve25519-dalek = { version = "4", features = ["rand_core"] }
+curve25519-dalek = { version = ">= 4.0, < 4.2", features = ["rand_core"] }
 
 bitcoin-serai = { path = "../../networks/bitcoin" }
-monero-simple-request-rpc = { git = "https://github.com/monero-oxide/monero-oxide", rev = "32e6b5fe5ba9e1ea3e68da882550005122a11d22" }
-monero-wallet = { git = "https://github.com/monero-oxide/monero-oxide", rev = "32e6b5fe5ba9e1ea3e68da882550005122a11d22" }
+monero-simple-request-rpc = { path = "../../networks/monero/rpc/simple-request" }
+monero-wallet = { path = "../../networks/monero/wallet" }
 
 scale = { package = "parity-scale-codec", version = "3" }
 serde = "1"
 serde_json = "1"
 
-processor = { package = "serai-processor", path = "../../processor", features = ["bitcoin", "monero"] }
+# processor = { package = "serai-processor", path = "../../processor", features = ["bitcoin", "monero"] }
 
 serai-client = { path = "../../substrate/client", features = ["serai"] }
 
@@ -42,6 +40,6 @@ tokio = { version = "1", features = ["time"] }
 
 dockertest = "0.5"
 serai-docker-tests = { path = "../docker" }
-serai-message-queue-tests = { path = "../message-queue" }
+serai-message-queue-tests = { path = "../../message-queue/tests" }
 serai-processor-tests = { path = "../processor" }
 serai-coordinator-tests = { path = "../coordinator" }

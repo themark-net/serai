@@ -1,0 +1,50 @@
+[package]
+name = "serai-client-serai"
+version = "0.1.0"
+description = "A client for the Serai network itself"
+license = "MIT"
+repository = "https://github.com/serai-dex/serai/tree/develop/substrate/client/serai"
+authors = ["Luke Parker <lukeparker5132@gmail.com>"]
+keywords = ["serai"]
+edition = "2024"
+rust-version = "1.91"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true
+
+[dependencies]
+thiserror = { version = "2", default-features = false, features = ["std"] }
+core-json-traits = { version = "0.4", default-features = false, features = ["alloc"] }
+core-json-derive = { version = "0.4.1", default-features = false }
+simple-request = { path = "../../../common/request", version = "0.3" }
+
+hex = { version = "0.4", default-features = false, features = ["alloc"] }
+borsh = { version = "1", default-features = false, features = ["std"] }
+
+sp-crypto-hashing = { git = "https://github.com/serai-dex/patch-polkadot-sdk", default-features = false, features = ["std"] }
+serai-abi = { path = "../../abi", version = "0.1", default-features = false, features = ["std"] }
+
+[dev-dependencies]
+zeroize = "1.5"
+rand_core = "0.6"
+
+blake2 = { version = "0.11", default-features = false }
+ciphersuite = { path = "../../../crypto/ciphersuite" }
+dalek-ff-group = { path = "../../../crypto/dalek-ff-group" }
+musig = { path = "../../../crypto/dkg/musig" }
+frost = { package = "modular-frost", path = "../../../crypto/frost", features = ["tests"] }
+schnorrkel = { path = "../../../crypto/schnorrkel", package = "frost-schnorrkel" }
+
+sp-core = { git = "https://github.com/serai-dex/patch-polkadot-sdk" }
+sp-application-crypto = { git = "https://github.com/serai-dex/patch-polkadot-sdk" }
+
+bitvec = { version = "1", default-features = false, features = ["std"] }
+
+tokio = { version = "1", default-features = false, features = ["rt", "macros"] }
+dockertest = "0.5"
+serai-docker-tests = { path = "../../../tests/docker" }
+serai-substrate-tests = { path = "../../../tests/substrate" }

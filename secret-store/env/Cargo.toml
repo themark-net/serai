@@ -1,0 +1,31 @@
+[package]
+name = "serai-env"
+version = "0.1.0"
+description = "A common library for Serai apps to access environment variables"
+license = "AGPL-3.0-only"
+repository = "https://github.com/serai-dex/serai/tree/develop/secret-store/env"
+authors = ["Luke Parker <lukeparker5132@gmail.com>"]
+keywords = []
+edition = "2024"
+publish = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true
+
+[dependencies]
+zeroize = { version = "1", default-features = false, features = ["alloc"] }
+rand_core = { version = "0.6", default-features = false, features = ["std"] }
+
+blake2 = { version = "0.10", default-features = false, features = ["std"] }
+# TODO: Enabling the `std` feature adds a new dependency. What's up with that?
+chacha20 = { version = "0.9", default-features = false }
+curve25519-dalek = { version = ">= 4.0, < 4.2", default-features = false, features = ["alloc", "precomputed-tables", "rand_core"] }
+
+log = { version = "0.4", default-features = false, features = ["std"] }
+env_logger = { version = "0.11", default-features = false, features = ["humantime"] }
+
+tokio = { version = "1", default-features = false, features = ["io-util", "net"] }

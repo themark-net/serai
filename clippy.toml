@@ -1,0 +1,90 @@
+allow-one-hash-in-raw-strings = true
+
+[[disallowed-methods]]
+path = "Option::map_or"
+[[disallowed-methods]]
+path = "Option::map_or_else"
+
+[[disallowed-methods]]
+path = "borsh::from_reader"
+reason = "`borsh::from_reader` errors if there's any bytes following the read item, which isn't documented behavior"
+
+[[disallowed-methods]]
+path = "crypto_bigint::Int::jacobi_symbol"
+reason = "https://github.com/RustCrypto/crypto-bigint/issues/1295"
+allow-invalid = true # TODO: Conflict because of `crypto-bigint 0.5`?
+[[disallowed-methods]]
+path = "crypto_bigint::Int::jacobi_symbol_vartime"
+reason = "https://github.com/RustCrypto/crypto-bigint/issues/1295"
+allow-invalid = true # TODO: Conflict because of `crypto-bigint 0.5`?
+[[disallowed-methods]]
+path = "crypto_bigint::Uint::jacobi_symbol"
+reason = "https://github.com/RustCrypto/crypto-bigint/issues/1295"
+allow-invalid = true # TODO: Conflict because of `crypto-bigint 0.5`?
+[[disallowed-methods]]
+path = "crypto_bigint::Uint::jacobi_symbol_vartime"
+reason = "https://github.com/RustCrypto/crypto-bigint/issues/1295"
+allow-invalid = true # TODO: Conflict because of `crypto-bigint 0.5`?
+[[disallowed-methods]]
+path = "crypto_bigint::modular::ConstMontyForm::jacobi_symbol"
+reason = "https://github.com/RustCrypto/crypto-bigint/issues/1295"
+allow-invalid = true # TODO: Conflict because of `crypto-bigint 0.5`?
+[[disallowed-methods]]
+path = "crypto_bigint::modular::ConstMontyForm::jacobi_symbol_vartime"
+reason = "https://github.com/RustCrypto/crypto-bigint/issues/1295"
+allow-invalid = true # TODO: Conflict because of `crypto-bigint 0.5`?
+[[disallowed-methods]]
+path = "crypto_bigint::modular::FixedMontyForm::jacobi_symbol"
+reason = "https://github.com/RustCrypto/crypto-bigint/issues/1295"
+allow-invalid = true # TODO: Conflict because of `crypto-bigint 0.5`?
+[[disallowed-methods]]
+path = "crypto_bigint::modular::FixedMontyForm::jacobi_symbol_vartime"
+reason = "https://github.com/RustCrypto/crypto-bigint/issues/1295"
+allow-invalid = true # TODO: Conflict because of `crypto-bigint 0.5`?
+
+# TODO: https://github.com/rust-lang/rust-clippy/pull/12194
+[[disallowed-methods]]
+path = "<ruint::Uint as core::ops::Add>::add"
+reason = "`add` uses wrapping arithmetic when we want checked"
+[[disallowed-methods]]
+path = "<ruint::Uint as core::ops::Add>::add_assign"
+reason = "`add_assign` uses wrapping arithmetic when we want checked"
+[[disallowed-methods]]
+path = "<ruint::Uint as core::ops::Sub>::sub"
+reason = "`sub` uses wrapping arithmetic when we want checked"
+[[disallowed-methods]]
+path = "<ruint::Uint as core::ops::Sub>::sub_assign"
+reason = "`sub_assign` uses wrapping arithmetic when we want checked"
+[[disallowed-methods]]
+path = "<ruint::Uint as core::ops::Mul>::mul"
+reason = "`mul` uses wrapping arithmetic when we want checked"
+[[disallowed-methods]]
+path = "<ruint::Uint as core::ops::Mul>::mul_assign"
+reason = "`mul_assign` uses wrapping arithmetic when we want checked"
+
+[[disallowed-methods]]
+path = "std::env::var"
+reason = "Use `serai_env::Environment::var` if this isn't in a build script"
+[[disallowed-methods]]
+path = "std::env::var_os"
+reason = "Use `serai_env::Environment::var` if this isn't in a build script"
+[[disallowed-methods]]
+path = "std::env::vars"
+reason = "Use `serai_env::Environment::var` if this isn't in a build script"
+[[disallowed-methods]]
+path = "std::env::vars_os"
+reason = "Use `serai_env::Environment::var` if this isn't in a build script"
+
+[[disallowed-methods]]
+path = "serai_coins_pallet::pallet::Pallet::burn_fn"
+reason = "this method should only be used when not `CoinsInstance`, which isn't enforced at compile-time"
+
+[[disallowed-methods]]
+path = "serai_coins_pallet::pallet::Pallet::transfer"
+reason = "this method should only be used with `CoinsInstance`, which isn't enforced at compile-time"
+[[disallowed-methods]]
+path = "serai_coins_pallet::pallet::Pallet::burn"
+reason = "this method should only be used with `CoinsInstance`, which isn't enforced at compile-time"
+[[disallowed-methods]]
+path = "serai_coins_pallet::pallet::Pallet::burn_with_instruction"
+reason = "this method should only be used with `CoinsInstance`, which isn't enforced at compile-time"

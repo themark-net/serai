@@ -1,0 +1,179 @@
+name: build-dependencies
+description: Installs build dependencies for Serai
+
+runs:
+  using: "composite"
+  steps:
+    - name: Remove unused packages
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        # Ensure the repositories are synced
+        sudo apt update -y
+
+        # Actually perform the removals
+        sudo apt remove -y "*powershell*" "*nuget*" "*bazel*" "*ansible*" "*terraform*" "*heroku*" "*aws*" "*azure-*"
+        sudo apt remove -y "*yarn*" "*ant*" "*java*" "*kotlin*" "*golang*" "*swift*" "*julia*" "*fortran*" "*android*"
+        sudo apt remove -y "*php*" "*apache2*" "*nginx*" "*firefox*" "*chromium*" "*chrome*" "*edge*"
+
+        sudo apt remove -y --allow-remove-essential -f shim-signed *python3*
+        # This removal command requires the prior removals due to unmet dependencies otherwise
+        sudo apt remove -y "*qemu*" "*sql*" "*texinfo*" "*imagemagick*"
+
+        # Reinstall python3 as a general dependency of a functional operating system
+        sudo apt install -y python3 --fix-missing
+
+    - name: Remove unused packages
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        (gem uninstall -aIx) || true
+
+        brew analytics off || true
+        rm -rf $(brew --cache)
+
+        # The following takes literal _hours_
+        # Instead, we uninstall `homebrew` entirely, before reinstalling it
+
+        # # Identify all installed formulae, casks, and available taps
+        # brew install jq || true
+        # PACKAGES=$(brew info --installed --json=v2 | jq -r ".[][] | select(.full_name, .full_token | .)[]")
+        # TAPS=$(brew info --json=v2 | jq -r ".[][].tap" | uniq)
+
+        # # Do not bother removing unused dependencies as we go as we're removing everything anyways
+        # export HOMEBREW_NO_AUTOREMOVE=1
+        # # Remove every pre-installed tap and package
+        # # We remove taps first to start reducing the size of the package list
+        # for tap in $TAPS; do
+        #   brew untap --force "$tap" || true
+        # done
+
+        # for package in $PACKAGES; do
+        #   brew uninstall --force --zap --ignore-dependencies "$package" || true
+        # done
+
+        HOMEBREW_INSTALLER=b41c8e7b3588e2899974119faf3b2a897428648d
+        if [ "${{ runner.arch }}" = "X64" ]; then
+          # This is the last commit before support for non-Apple-Silicon macOS was removed
+          HOMEBREW_INSTALLER=7a133dcc74051ee4efc79467ed215dfedf45aea2
+        fi
+        curl -fsSL https://raw.githubusercontent.com/Homebrew/install/$HOMEBREW_INSTALLER/uninstall.sh > uninstall.sh
+        curl -fsSL https://raw.githubusercontent.com/Homebrew/install/$HOMEBREW_INSTALLER/install.sh > install.sh
+        NONINTERACTIVE=1 sudo /bin/bash uninstall.sh --force
+        rm uninstall.sh
+        NONINTERACTIVE=1 /bin/bash install.sh
+        rm install.sh
+
+        # Clean up the Rust installation made by via `homebrew`'s `rustup` formula
+        rm -rf ~/.rustup ~/.cargo
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          sudo apt update -y
+          sudo apt install -y ca-certificates protobuf-compiler libclang-dev
+          # This is used by the `cargo-install` action
+          sudo apt install -y jq
+        elif [ "$RUNNER_OS" == "Windows" ]; then
+          # Use `-gnu` to avoid the installation and licensing headaches of `-msvc`
+          rustup set default-host x86_64-pc-windows-gnu
+          choco install protoc llvm
+          # This is used by the `cargo-install` action
+          choco install jq
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          brew update
+          brew install protobuf
+          # This is used by the `cargo-install` action
+          brew install jq
+        fi
+
+        # Install `rustup`
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y
+
+    - name: Install `libclang.dylib`
+      if: runner.os == 'macOS'
+      uses: ./.github/actions/libclang
+
+    - name: Install `svm-rs`
+      uses: ./.github/actions/cargo-install
+      # Only install `svm-rs` if this _is_ Windows but _is not_ ARM
+      if: ${{ (runner.os == 'Windows') && (!((runner.arch == 'ARM') || (runner.arch == 'ARM64'))) }}
+      with:
+        crate: svm-rs
+        version: 0.5.32
+        # This installs two binaries which borks our expectations for caching
+        no-cache: true
+
+    - name: Install `solc`
+      # Only install `solc` if this _is not_ Windows for ARM, which `solc` doesn't ship binaries for
+      if: ${{ !((runner.os == 'Windows') && ((runner.arch == 'ARM') || (runner.arch == 'ARM64'))) }}
+      shell: bash
+      run: |
+        solc_version() {
+          # Install the version of `solc` specified in the contracts
+          # This also checks the specified version is consistent across contracts
+          cat $(find . -name "*.sol") | grep "pragma solidity" | while IFS="\n" read -r line; do
+            THIS_SOLC_VERSION=$(printf "%s" "$line" | cut -d'^' -f2 | cut -d'=' -f2 | cut -d';' -f1)
+            if [ "$SOLC_VERSION" = "" ]; then
+              SOLC_VERSION="$THIS_SOLC_VERSION"
+              echo "$SOLC_VERSION"
+            fi
+            if [ ! "$SOLC_VERSION" = "$THIS_SOLC_VERSION" ]; then
+              echo "Inconsistent Solidity requirement in \`.sol\` files"
+              exit 1
+            fi
+          done
+        }
+
+        OS=$(echo "${{ runner.os }}" | tr "[:upper:]" "[:lower:]")
+        if [ "$OS" = "windows" ]; then
+          # On Windows, we install via `svm`
+          svm install "$(solc_version)"
+          svm use "$(solc_version)"
+        else
+          # On non-Windows platforms, we install `solc` directly
+          if [ "${{ runner.arch }}" = "X64" ]; then
+            ARCH="amd64"
+          else
+            ARCH="arm64"
+          fi
+
+          if [ "$OS" = "macos" ]; then
+            OS="macosx"
+            # The `amd64` binaries are universal binaries for both architectures
+            ARCH="amd64"
+          fi
+
+          BINARY=$(curl -sL https://binaries.soliditylang.org/${OS}-${ARCH}/list.txt | grep -F "$(solc_version)")
+          curl -sL https://binaries.soliditylang.org/${OS}-${ARCH}/${BINARY} -o /usr/local/bin/solc
+          chmod +x /usr/local/bin/solc
+        fi
+
+    - name: Update system dependencies
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt update -y
+        sudo apt upgrade -y
+        sudo apt autoremove -y
+        sudo apt clean -y
+
+    - name: Update system dependencies
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew update || true
+        brew upgrade || true
+        brew autoremove
+        brew cleanup
+        rm -rf $(brew --cache)
+
+    - name: Set GitHub CI Environment Variables
+      shell: bash
+      run: |
+        # These tweak the amount of iterations performed as approprtiate for GitHub's CI
+        echo 'GITHUB_CI=true' >> "$GITHUB_ENV"
+        echo RUSTFLAGS="$RUSTFLAGS --cfg github_ci" >> "$GITHUB_ENV"
+        # We always appreciate backtraces in the CI
+        echo 'RUST_BACKTRACE=1' >> "$GITHUB_ENV"

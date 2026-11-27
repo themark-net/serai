@@ -1,0 +1,79 @@
+[package]
+name = "dkg-evrf"
+version = "0.1.0"
+description = "Publicly-verifiable one-round threshold distributed key generation"
+license = "MIT"
+repository = "https://github.com/serai-dex/serai/tree/develop/crypto/dkg/evrf"
+authors = ["Luke Parker <lukeparker5132@gmail.com>"]
+keywords = ["dkg", "multisig", "threshold", "ff", "group"]
+edition = "2024"
+rust-version = "1.89"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true
+
+[dependencies]
+thiserror = { version = "2", default-features = false }
+
+rand_core = { version = "0.6", default-features = false, features = ["alloc"] }
+
+zeroize = { version = "1.5", default-features = false, features = ["alloc", "zeroize_derive"] }
+
+std-shims = { version = "0.1", path = "../../../common/std-shims", default-features = false, features = ["alloc"] }
+
+transcript = { package = "flexible-transcript", path = "../../transcript", version = "0.3.2", default-features = false, features = ["recommended"] }
+
+ciphersuite = { path = "../../ciphersuite", version = "0.4.1", default-features = false, features = ["alloc"] }
+multiexp = { path = "../../multiexp", version = "0.5", default-features = false }
+
+generic-array = { version = "1", default-features = false, features = ["alloc"] }
+blake2 = { version = "0.11", default-features = false }
+rand_chacha = { version = "0.3", default-features = false }
+
+generalized-bulletproofs = { git = "https://github.com/monero-oxide/monero-oxide", rev = "46135ae638ecab6b168a53c9b315242d00386754", default-features = false }
+ec-divisors = { git = "https://github.com/monero-oxide/monero-oxide", rev = "46135ae638ecab6b168a53c9b315242d00386754", default-features = false }
+generalized-bulletproofs-circuit-abstraction = { git = "https://github.com/monero-oxide/monero-oxide", rev = "46135ae638ecab6b168a53c9b315242d00386754", default-features = false }
+generalized-bulletproofs-ec-gadgets = { git = "https://github.com/monero-oxide/monero-oxide", rev = "46135ae638ecab6b168a53c9b315242d00386754", default-features = false }
+
+dkg = { path = "..", default-features = false }
+
+[dev-dependencies]
+rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
+rand = { version = "0.8", default-features = false, features = ["std"] }
+ciphersuite = { path = "../../ciphersuite", default-features = false, features = ["std"]  }
+embedwards25519 = { path = "../../embedwards25519", default-features = false, features = ["std"] }
+dalek-ff-group = { path = "../../dalek-ff-group", default-features = false, features = ["std"] }
+generalized-bulletproofs = { git = "https://github.com/monero-oxide/monero-oxide", rev = "46135ae638ecab6b168a53c9b315242d00386754", features = ["tests"] }
+dkg-recovery = { path = "../recovery" }
+
+[features]
+std = [
+  "thiserror/std",
+
+  "rand_core/std",
+
+  "zeroize/std",
+
+  "std-shims/std",
+
+  "transcript/std",
+
+  "ciphersuite/std",
+  "multiexp/std",
+  "multiexp/batch",
+
+  "rand_chacha/std",
+
+  "generalized-bulletproofs/std",
+  "ec-divisors/std",
+  "generalized-bulletproofs-circuit-abstraction/std",
+  "generalized-bulletproofs-ec-gadgets/std",
+
+  "dkg/std",
+]
+tests = ["rand_core/getrandom"]
+default = ["std"]

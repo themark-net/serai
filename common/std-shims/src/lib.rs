@@ -1,74 +1,39 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
-#![cfg_attr(not(feature = "std"), no_std)]
+#![deny(missing_docs)]
+#![no_std]
+#![cfg_attr(feature = "std", allow(clippy::std_instead_of_core))] // TODO: `core::io`
 
-pub extern crate alloc;
+#[cfg(not(feature = "alloc"))]
+pub use core::*;
+#[cfg(not(feature = "alloc"))]
+pub use core::{alloc, borrow, ffi, fmt, slice, str, task};
 
-pub mod sync;
+#[cfg(not(feature = "std"))]
+pub use core::error;
+
+#[cfg(feature = "alloc")]
+extern crate alloc as extern_alloc;
+#[cfg(feature = "alloc")]
+pub use extern_alloc::{alloc, borrow, boxed, ffi, fmt, rc, slice, str, string, task, vec, format};
+#[cfg(feature = "std")]
+extern crate std;
+
+/// A shim for [`std::collections`](https://doc.rust-lang.org/1.96.0/std/collections).
 pub mod collections;
+/// A shim for [`std::io`](https://doc.rust-lang.org/1.96.0/std/io).
 pub mod io;
+/// A shim for [`std::sync`](https://doc.rust-lang.org/1.96.0/std/sync).
+pub mod sync;
 
-pub use alloc::vec;
-pub use alloc::str;
-pub use alloc::string;
-
+/// A shim for [`std::prelude`](https://doc.rust-lang.org/1.96.0/std/prelude).
 pub mod prelude {
-  #[rustversion::before(1.73)]
-  #[doc(hidden)]
-  pub trait StdShimsDivCeil {
-    fn div_ceil(self, rhs: Self) -> Self;
-  }
-  #[rustversion::before(1.73)]
-  mod impl_divceil {
-    use super::StdShimsDivCeil;
-    impl StdShimsDivCeil for u8 {
-      fn div_ceil(self, rhs: Self) -> Self {
-        (self + (rhs - 1)) / rhs
-      }
-    }
-    impl StdShimsDivCeil for u16 {
-      fn div_ceil(self, rhs: Self) -> Self {
-        (self + (rhs - 1)) / rhs
-      }
-    }
-    impl StdShimsDivCeil for u32 {
-      fn div_ceil(self, rhs: Self) -> Self {
-        (self + (rhs - 1)) / rhs
-      }
-    }
-    impl StdShimsDivCeil for u64 {
-      fn div_ceil(self, rhs: Self) -> Self {
-        (self + (rhs - 1)) / rhs
-      }
-    }
-    impl StdShimsDivCeil for u128 {
-      fn div_ceil(self, rhs: Self) -> Self {
-        (self + (rhs - 1)) / rhs
-      }
-    }
-    impl StdShimsDivCeil for usize {
-      fn div_ceil(self, rhs: Self) -> Self {
-        (self + (rhs - 1)) / rhs
-      }
-    }
-  }
-
-  #[cfg(feature = "std")]
-  #[rustversion::before(1.74)]
-  #[doc(hidden)]
-  pub trait StdShimsIoErrorOther {
-    fn other<E>(error: E) -> Self
-    where
-      E: Into<Box<dyn std::error::Error + Send + Sync>>;
-  }
-  #[cfg(feature = "std")]
-  #[rustversion::before(1.74)]
-  impl StdShimsIoErrorOther for std::io::Error {
-    fn other<E>(error: E) -> Self
-    where
-      E: Into<Box<dyn std::error::Error + Send + Sync>>,
-    {
-      std::io::Error::new(std::io::ErrorKind::Other, error)
-    }
-  }
+  #[cfg(feature = "alloc")]
+  pub use extern_alloc::{
+    format, vec,
+    borrow::ToOwned,
+    boxed::Box,
+    vec::Vec,
+    string::{String, ToString},
+  };
 }

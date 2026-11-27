@@ -14,17 +14,17 @@ pub fn build(orchestration_path: &Path, network: Network, name: &str) {
   repo_path.pop();
 
   let mut dockerfile_path = orchestration_path.to_path_buf();
-  if HashSet::from(["bitcoin", "ethereum", "monero", "monero-wallet-rpc"]).contains(name) {
+  if HashSet::from(["bitcoin", "ethereum", "monero"]).contains(name) {
     dockerfile_path = dockerfile_path.join("networks");
   }
   if name.contains("-processor") {
     dockerfile_path =
-      dockerfile_path.join("processor").join(name.split('-').next().unwrap()).join("Dockerfile");
+      dockerfile_path.join("processor").join(name.split('-').next().unwrap()).join("Containerfile");
   } else {
-    dockerfile_path = dockerfile_path.join(name).join("Dockerfile");
+    dockerfile_path = dockerfile_path.join(name).join("Containerfile");
   }
 
-  println!("Building {}...", &name);
+  println!("Building {name}...");
 
   if !Command::new("docker")
     .current_dir(&repo_path)

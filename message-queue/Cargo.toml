@@ -1,12 +1,12 @@
 [package]
 name = "serai-message-queue"
 version = "0.1.0"
-description = "A message queue for Serai focused on consistency"
+description = "The core of Serai's message queue"
 license = "AGPL-3.0-only"
 repository = "https://github.com/serai-dex/serai/tree/develop/message-queue"
 authors = ["Luke Parker <lukeparker5132@gmail.com>"]
 keywords = []
-edition = "2021"
+edition = "2024"
 publish = false
 
 [package.metadata.docs.rs]
@@ -17,37 +17,14 @@ rustdoc-args = ["--cfg", "docsrs"]
 workspace = true
 
 [dependencies]
-# Macros
-once_cell = { version = "1", default-features = false }
-
-# Encoders
-hex = { version = "0.4", default-features = false, features = ["std"] }
-borsh = { version = "1", default-features = false, features = ["std", "derive", "de_strict_order"] }
-
-# Libs
 zeroize = { version = "1", default-features = false, features = ["std"] }
 rand_core = { version = "0.6", default-features = false, features = ["std"] }
 
-# Cryptography
-transcript = { package = "flexible-transcript", path = "../crypto/transcript", default-features = false, features = ["std", "recommended"] }
-dalek-ff-group = { path = "../crypto/dalek-ff-group", default-features = false, features = ["std"] }
+transcript = { package = "flexible-transcript", path = "../crypto/transcript", default-features = false, features = ["std"] }
 ciphersuite = { path = "../crypto/ciphersuite", default-features = false, features = ["std"] }
+dalek-ff-group = { path = "../crypto/dalek-ff-group", default-features = false, features = ["std"] }
 schnorr-signatures = { path = "../crypto/schnorr", default-features = false, features = ["std"] }
 
-# Application
-log = { version = "0.4", default-features = false, features = ["std"] }
-env_logger = { version = "0.10", default-features = false, features = ["humantime"] }
+borsh = { version = "1", default-features = false, features = ["std", "derive", "de_strict_order"] }
 
-# Uses a single threaded runtime since this shouldn't ever be CPU-bound
-tokio = { version = "1", default-features = false, features = ["rt", "time", "io-util", "net", "macros"] }
-
-zalloc = { path = "../common/zalloc" }
-serai-db = { path = "../common/db", optional = true }
-
-serai-env = { path = "../common/env" }
-
-serai-primitives = { path = "../substrate/primitives", features = ["borsh"] }
-
-[features]
-parity-db = ["serai-db/parity-db"]
-rocksdb = ["serai-db/rocksdb"]
+serai-primitives = { path = "../substrate/primitives", default-features = false, features = ["std"] }

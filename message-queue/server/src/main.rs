@@ -1,0 +1,254 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![doc = include_str!("../../README.md")]
+#![deny(missing_docs)]
+#![allow(clippy::std_instead_of_alloc, clippy::std_instead_of_core)]
+
+pub(crate) use std::{
+  sync::{Arc, RwLock},
+  collections::HashMap,
+};
+
+use dalek_ff_group::Ristretto;
+pub(crate) use ciphersuite::{group::GroupEncoding, WrappedGroup, GroupCanonicalEncoding};
+
+pub(crate) use serai_primitives::network_id::ExternalNetworkId;
+
+pub(crate) use tokio::{
+  io::{AsyncReadExt as _, AsyncWriteExt as _},
+  net::TcpListener,
+};
+
+use serai_db::{Get, Transaction as DbTxn, Db as _};
+
+use serai_env::Environment;
+
+pub use message_queue::*;
+mod queue;
+pub(crate) use crate::queue::Queue;
+
+#[cfg(all(feature = "parity-db", not(feature = "rocksdb")))]
+pub(crate) type Db = Arc<serai_db::ParityDb>;
+#[cfg(feature = "rocksdb")]
+pub(crate) type Db = serai_db::RocksDB;
+
+#[expect(clippy::type_complexity)]
+mod clippy {
+  use std::sync::LazyLock;
+  use super::*;
+  pub(crate) static KEYS: LazyLock<Arc<RwLock<HashMap<Service, <Ristretto as WrappedGroup>::G>>>> =
+    LazyLock::new(|| Arc::new(RwLock::new(HashMap::new())));
+  pub(crate) static QUEUES: LazyLock<Arc<RwLock<HashMap<(Service, Service), RwLock<Queue<Db>>>>>> =
+    LazyLock::new(|| Arc::new(RwLock::new(HashMap::new())));
+}
+pub(crate) use self::clippy::*;
+
+#[global_allocator]
+static ALLOCATOR: zalloc::ZeroizingAlloc<std::alloc::System> =
+  zalloc::ZeroizingAlloc::wrap(std::alloc::System);
+
+// queue RPC method
+/*
+  Queues a message to be delivered from a processor to a coordinator, or vice versa.
+
+  Messages are authenticated to be coming from the claimed service. Recipient services SHOULD
+  independently verify signatures.
+
+  The metadata specifies an intent. Only one message, for a specified intent, will be delivered.
+  This allows services to safely send messages multiple times without them being delivered
+  multiple times.
+
+  The message will be ordered by this service, with the order having no guarantees other than
+  successful ordering by the time this call returns.
+*/
+pub(crate) fn queue_message(db: &mut Db, meta: &Metadata, msg: Vec<u8>, signature: [u8; 64]) {
+  {
+    let from = KEYS.read().unwrap()[&meta.from];
+    assert!(
+      (Request::Queue { metadata: meta.clone(), message: msg.clone(), signature }).verify(from)
+    );
+  }
+
+  // Assert one, and only one of these, is the coordinator
+  assert!(matches!(meta.from, Service::Coordinator) ^ matches!(meta.to, Service::Coordinator));
+
+  // Lock the queue
+  let queue_lock = QUEUES.read().unwrap();
+  let mut queue_lock = queue_lock[&(meta.from, meta.to)].write().unwrap();
+
+  // Verify (from, to, intent) hasn't been prior seen
+  fn key(domain: &'static [u8], key: impl AsRef<[u8]>) -> Vec<u8> {
+    [&[u8::try_from(domain.len()).unwrap()], domain, key.as_ref()].concat()
+  }
+  fn intent_key(from: Service, to: Service, intent: &[u8]) -> Vec<u8> {
+    key(b"intent_seen", borsh::to_vec(&(from, to, intent)).unwrap())
+  }
+  let mut txn = db.txn();
+  let intent_key = intent_key(meta.from, meta.to, &meta.intent);
+  if Get::get(&txn, &intent_key).is_some() {
+    serai_env::warn!(
+      "Prior queued message attempted to be queued again. From: {:?} To: {:?} Intent: {}",
+      meta.from,
+      meta.to,
+      hex::encode(&meta.intent)
+    );
+    return;
+  }
+  DbTxn::set(&mut txn, intent_key, []);
+
+  // Queue it
+  let id = queue_lock.queue_message(
+    &mut txn,
+    QueuedMessage {
+      metadata: meta.clone(),
+      message: msg,
+      signature,
+      // Temporary value which queue_message will override
+      id: u64::MAX,
+    },
+  );
+
+  serai_env::info!("Queued message. From: {:?} To: {:?} ID: {id}", meta.from, meta.to);
+  DbTxn::commit(txn);
+}
+
+// next RPC method
+/*
+  Gets the next message in queue for the named services.
+
+  This is not authenticated due to the fact every nonce would have to be saved to prevent
+  replays, or a challenge-response protocol implemented. Neither are worth doing when there
+  should be no sensitive data on this server.
+*/
+pub(crate) fn get_next_message(from: Service, to: Service) -> Option<QueuedMessage> {
+  let queue_outer = QUEUES.read().unwrap();
+  let queue = queue_outer[&(from, to)].read().unwrap();
+  let next = queue.last_acknowledged().map_or(0, |i| i + 1);
+  queue.get_message(next)
+}
+
+// ack RPC method
+/*
+  Acknowledges a message as received and handled, meaning it'll no longer be returned as the next
+  message.
+*/
+pub(crate) fn ack_message(from: Service, to: Service, id: u64, signature: [u8; 64]) {
+  {
+    let to_key = KEYS.read().unwrap()[&to];
+    assert!((Request::Acknowledge { from, to, id, signature }).verify(to_key));
+  }
+
+  // Is it:
+  // The acknowledged message should be > last acknowledged OR
+  // The acknowledged message should be >=
+  // It's the first if we save messages as acknowledged before acknowledging them
+  // It's the second if we acknowledge messages before saving them as acknowledged
+  // TODO: Check only a proper message is being acked
+
+  serai_env::info!("Acknowledging From: {from:?} To: {to:?} ID: {id}");
+
+  QUEUES.read().unwrap()[&(from, to)].write().unwrap().ack_message(id);
+}
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
+  serai_env::init_logger();
+  serai_env::info!("Starting message-queue service...");
+
+  // Open the DB
+  #[allow(unused_variables, unreachable_code)]
+  let (env, db) = {
+    #[cfg(all(feature = "parity-db", feature = "rocksdb"))]
+    panic!("built with parity-db and rocksdb");
+
+    let env = Environment::from_secret_store().await;
+
+    #[cfg(all(feature = "parity-db", not(feature = "rocksdb")))]
+    let db = serai_db::new_parity_db(env.var("DB_PATH").expect("path to DB wasn't specified"));
+    #[cfg(feature = "rocksdb")]
+    let db = serai_db::new_rocksdb(env.var("DB_PATH").expect("path to DB wasn't specified"));
+    (env, db)
+  };
+
+  let read_key = |str| {
+    let key = env.var(str)?;
+
+    let mut repr = <<Ristretto as WrappedGroup>::G as GroupEncoding>::Repr::default();
+    repr.as_mut().copy_from_slice(&hex::decode(key).unwrap());
+    Some(<Ristretto as GroupCanonicalEncoding>::from_canonical_bytes(&repr).unwrap())
+  };
+
+  let register_service = |service, key| {
+    KEYS.write().unwrap().insert(service, key);
+    let mut queues = QUEUES.write().unwrap();
+    if service == Service::Coordinator {
+      for network in ExternalNetworkId::all() {
+        queues.insert(
+          (service, Service::Processor(network)),
+          RwLock::new(Queue::new(&env, db.clone(), service, Service::Processor(network))),
+        );
+      }
+    } else {
+      queues.insert(
+        (service, Service::Coordinator),
+        RwLock::new(Queue::new(&env, db.clone(), service, Service::Coordinator)),
+      );
+    }
+  };
+
+  // Make queues for each ExternalNetworkId
+  for network in ExternalNetworkId::all() {
+    // Use a match so we error if the list of NetworkIds changes
+    let Some(key) = read_key(match network {
+      ExternalNetworkId::Bitcoin => "BITCOIN_KEY",
+      ExternalNetworkId::Ethereum => "ETHEREUM_KEY",
+      ExternalNetworkId::Monero => "MONERO_KEY",
+    }) else {
+      continue;
+    };
+
+    register_service(Service::Processor(network), key);
+  }
+
+  // And the coordinator's
+  register_service(Service::Coordinator, read_key("COORDINATOR_KEY").unwrap());
+
+  // Start server
+  // 5132 ^ ((b'M' << 8) | b'Q')
+  let server = TcpListener::bind("0.0.0.0:2287").await.unwrap();
+
+  loop {
+    let (mut socket, _) = server.accept().await.unwrap();
+    // TODO: Add a magic value with a key at the start of the connection to make this authed
+    let mut db = db.clone();
+    tokio::spawn(async move {
+      while let Ok(msg_len) = socket.read_u32_le().await {
+        let mut buf = vec![0; usize::try_from(msg_len).unwrap()];
+        let Ok(_) = socket.read_exact(&mut buf).await else { break };
+        let msg = borsh::from_slice(&buf).unwrap();
+
+        match msg {
+          Request::Queue { metadata, message, signature } => {
+            queue_message(&mut db, &metadata, message, signature);
+            let Ok(()) = socket.write_all(&[1]).await else { break };
+          }
+          Request::Fetch { from, to } => match get_next_message(from, to) {
+            Some(msg) => {
+              let Ok(()) = socket.write_all(&[1]).await else { break };
+              let msg = borsh::to_vec(&msg).unwrap();
+              let len = u32::try_from(msg.len()).unwrap();
+              let Ok(()) = socket.write_all(&len.to_le_bytes()).await else { break };
+              let Ok(()) = socket.write_all(&msg).await else { break };
+            }
+            None => {
+              let Ok(()) = socket.write_all(&[0]).await else { break };
+            }
+          },
+          Request::Acknowledge { from, to, id, signature } => {
+            ack_message(from, to, id, signature);
+            let Ok(()) = socket.write_all(&[1]).await else { break };
+          }
+        }
+      }
+    });
+  }
+}

@@ -1,13 +1,13 @@
 [package]
 name = "serai-client"
 version = "0.1.0"
-description = "Client library for the Serai network"
+description = "A client for Serai and its connected networks"
 license = "MIT"
 repository = "https://github.com/serai-dex/serai/tree/develop/substrate/client"
 authors = ["Luke Parker <lukeparker5132@gmail.com>"]
 keywords = ["serai"]
-edition = "2021"
-rust-version = "1.82"
+edition = "2024"
+rust-version = "1.91"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -17,56 +17,17 @@ rustdoc-args = ["--cfg", "docsrs"]
 workspace = true
 
 [dependencies]
-zeroize = "^1.5"
-thiserror = { version = "1", optional = true }
+serai-client-serai = { path = "./serai", optional = true }
 
-hex = "0.4"
-scale = { package = "parity-scale-codec", version = "3" }
-serde = { version = "1", features = ["derive"], optional = true }
-serde_json = { version = "1", optional = true }
-
-serai-abi = { path = "../abi", version = "0.1" }
-
-multiaddr = { version = "0.18", optional = true }
-sp-core = { git = "https://github.com/serai-dex/patch-polkadot-sdk", rev = "da19e1f8ca7a9e2cbf39fbfa493918eeeb45e10b", optional = true }
-sp-runtime = { git = "https://github.com/serai-dex/patch-polkadot-sdk", rev = "da19e1f8ca7a9e2cbf39fbfa493918eeeb45e10b", optional = true }
-frame-system = { git = "https://github.com/serai-dex/patch-polkadot-sdk", rev = "da19e1f8ca7a9e2cbf39fbfa493918eeeb45e10b", optional = true }
-
-async-lock = "3"
-
-simple-request = { path = "../../common/request", version = "0.1", optional = true }
-
-bitcoin = { version = "0.32", optional = true }
-
-dalek-ff-group = { path = "../../crypto/dalek-ff-group", optional = true }
-ciphersuite = { path = "../../crypto/ciphersuite", version = "0.4", optional = true }
-monero-wallet = { git = "https://github.com/monero-oxide/monero-oxide", rev = "32e6b5fe5ba9e1ea3e68da882550005122a11d22", version = "0.1.0", default-features = false, features = ["std"], optional = true }
-
-[dev-dependencies]
-rand_core = "0.6"
-hex = "0.4"
-
-blake2 = "0.10"
-
-dalek-ff-group = { path = "../../crypto/dalek-ff-group" }
-ciphersuite = { path = "../../crypto/ciphersuite" }
-dkg-musig = { path = "../../crypto/dkg/musig" }
-frost = { package = "modular-frost", path = "../../crypto/frost", features = ["tests"] }
-schnorrkel = { path = "../../crypto/schnorrkel", package = "frost-schnorrkel" }
-
-tokio = "1"
-
-dockertest = "0.5"
-serai-docker-tests = { path = "../../tests/docker" }
+serai-client-bitcoin = { path = "./bitcoin", optional = true }
+serai-client-ethereum = { path = "./ethereum", optional = true }
+serai-client-monero = { path = "./monero", optional = true }
 
 [features]
-serai = ["thiserror", "serde", "serde_json", "serai-abi/serde", "multiaddr", "sp-core", "sp-runtime", "frame-system", "simple-request"]
-borsh = ["serai-abi/borsh"]
+serai = ["dep:serai-client-serai"]
 
-networks = []
-bitcoin = ["networks", "dep:bitcoin"]
-monero = ["networks", "dalek-ff-group", "ciphersuite", "monero-wallet"]
+bitcoin = ["dep:serai-client-bitcoin"]
+ethereum = ["dep:serai-client-ethereum"]
+monero = ["dep:serai-client-monero"]
 
-# Assumes the default usage is to use Serai as a DEX, which doesn't actually
-# require connecting to a Serai node
-default = ["bitcoin", "monero"]
+default = ["serai", "bitcoin", "ethereum", "monero"]

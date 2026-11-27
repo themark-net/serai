@@ -1,14 +1,14 @@
-use std::collections::HashMap;
+use std_shims::{prelude::*, collections::HashMap};
 
 use rand_core::{RngCore, CryptoRng};
 
-use ciphersuite::Ciphersuite;
+use ciphersuite::GroupIo;
 pub use dkg_recovery::recover_key;
 
 use crate::{
   Curve, Participant, ThresholdKeys, FrostError,
-  algorithm::{Algorithm, Hram, IetfSchnorr},
-  sign::{Writable, PreprocessMachine, SignMachine, SignatureMachine, AlgorithmMachine},
+  algorithm::{Algorithm, Hram, IrtfSchnorr},
+  sign::{Writable as _, PreprocessMachine, SignMachine, SignatureMachine as _, AlgorithmMachine},
 };
 
 /// Tests for the nonce handling code.
@@ -28,7 +28,7 @@ pub const PARTICIPANTS: u16 = 5;
 pub const THRESHOLD: u16 = ((PARTICIPANTS * 2) / 3) + 1;
 
 /// Create a key, for testing purposes.
-pub fn key_gen<R: RngCore + CryptoRng, C: Ciphersuite>(
+pub fn key_gen<R: RngCore + CryptoRng, C: GroupIo>(
   rng: &mut R,
 ) -> HashMap<Participant, ThresholdKeys<C>> {
   let res = dkg_dealer::key_gen::<R, C>(rng, THRESHOLD, PARTICIPANTS).unwrap();
@@ -69,7 +69,7 @@ pub fn algorithm_machines_without_clone<R: RngCore, C: Curve, A: Algorithm<C>>(
 
   machines
     .into_iter()
-    .filter_map(|(i, machine)| if included.contains(&i) { Some((i, machine)) } else { None })
+    .filter_map(|(i, machine)| included.contains(&i).then_some((i, machine)))
     .collect()
 }
 
@@ -107,7 +107,7 @@ pub(crate) fn preprocess<
       commitments.insert(i, {
         let mut buf = vec![];
         preprocess.write(&mut buf).unwrap();
-        machine.read_preprocess::<&[u8]>(&mut buf.as_ref()).unwrap()
+        machine.read_preprocess(&mut buf.as_slice()).unwrap()
       });
       (i, machine)
     })
@@ -119,7 +119,7 @@ pub(crate) fn preprocess<
 }
 
 // Run the preprocess and generate signature shares
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 pub(crate) fn preprocess_and_shares<
   R: RngCore + CryptoRng,
   M: PreprocessMachine,
@@ -143,7 +143,7 @@ pub(crate) fn preprocess_and_shares<
       shares.insert(i, {
         let mut buf = vec![];
         share.write(&mut buf).unwrap();
-        machine.read_share::<&[u8]>(&mut buf.as_ref()).unwrap()
+        machine.read_share(&mut buf.as_slice()).unwrap()
       });
       (i, machine)
     })
@@ -154,7 +154,7 @@ pub(crate) fn preprocess_and_shares<
 
 fn sign_internal<
   R: RngCore + CryptoRng,
-  M: PreprocessMachine,
+  M: PreprocessMachine<Signature: PartialEq>,
   F: FnMut(&mut R, &mut HashMap<Participant, M::SignMachine>),
 >(
   rng: &mut R,
@@ -170,7 +170,7 @@ fn sign_internal<
     if signature.is_none() {
       signature = Some(sig.clone());
     }
-    assert_eq!(&sig, signature.as_ref().unwrap());
+    assert!(&sig == signature.as_ref().unwrap());
   }
   signature.unwrap()
 }
@@ -178,7 +178,7 @@ fn sign_internal<
 /// Execute the signing protocol, without caching any machines. This isn't as comprehensive at
 /// testing as sign, and accordingly isn't preferred, yet is usable for machines not supporting
 /// caching.
-pub fn sign_without_caching<R: RngCore + CryptoRng, M: PreprocessMachine>(
+pub fn sign_without_caching<R: RngCore + CryptoRng, M: PreprocessMachine<Signature: PartialEq>>(
   rng: &mut R,
   machines: HashMap<Participant, M>,
   msg: &[u8],
@@ -188,7 +188,7 @@ pub fn sign_without_caching<R: RngCore + CryptoRng, M: PreprocessMachine>(
 
 /// Execute the signing protocol, randomly caching various machines to ensure they can cache
 /// successfully.
-pub fn sign_without_clone<R: RngCore + CryptoRng, M: PreprocessMachine>(
+pub fn sign_without_clone<R: RngCore + CryptoRng, M: PreprocessMachine<Signature: PartialEq>>(
   rng: &mut R,
   mut keys: HashMap<Participant, <M::SignMachine as SignMachine<M::Signature>>::Keys>,
   mut params: HashMap<Participant, <M::SignMachine as SignMachine<M::Signature>>::Params>,
@@ -220,7 +220,7 @@ pub fn sign_without_clone<R: RngCore + CryptoRng, M: PreprocessMachine>(
 /// successfully.
 pub fn sign<
   R: RngCore + CryptoRng,
-  M: PreprocessMachine<SignMachine: SignMachine<M::Signature, Params: Clone>>,
+  M: PreprocessMachine<SignMachine: SignMachine<M::Signature, Params: Clone>, Signature: PartialEq>,
 >(
   rng: &mut R,
   params: &<M::SignMachine as SignMachine<M::Signature>>::Params,
@@ -239,8 +239,8 @@ pub fn test_schnorr_with_keys<R: RngCore + CryptoRng, C: Curve, H: Hram<C>>(
 ) {
   const MSG: &[u8] = b"Hello, World!";
 
-  let machines = algorithm_machines(&mut *rng, &IetfSchnorr::<C, H>::ietf(), keys);
-  let sig = sign(&mut *rng, &IetfSchnorr::<C, H>::ietf(), keys.clone(), machines, MSG);
+  let machines = algorithm_machines(&mut *rng, &IrtfSchnorr::<C, H>::irtf(), keys);
+  let sig = sign(&mut *rng, &IrtfSchnorr::<C, H>::irtf(), keys.clone(), machines, MSG);
   let group_key = keys[&Participant::new(1).unwrap()].group_key();
   assert!(sig.verify(group_key, H::hram(&sig.R, &group_key, MSG)));
 }
@@ -248,7 +248,7 @@ pub fn test_schnorr_with_keys<R: RngCore + CryptoRng, C: Curve, H: Hram<C>>(
 /// Test a basic Schnorr signature.
 pub fn test_schnorr<R: RngCore + CryptoRng, C: Curve, H: Hram<C>>(rng: &mut R) {
   let keys = key_gen(&mut *rng);
-  test_schnorr_with_keys::<_, _, H>(&mut *rng, &keys)
+  test_schnorr_with_keys::<_, _, H>(&mut *rng, &keys);
 }
 
 /// Test an offset Schnorr signature.
@@ -266,8 +266,8 @@ pub fn test_offset_schnorr<R: RngCore + CryptoRng, C: Curve, H: Hram<C>>(rng: &m
     assert_eq!(keys.group_key(), offset_key);
   }
 
-  let machines = algorithm_machines(&mut *rng, &IetfSchnorr::<C, H>::ietf(), &keys);
-  let sig = sign(&mut *rng, &IetfSchnorr::<C, H>::ietf(), keys.clone(), machines, MSG);
+  let machines = algorithm_machines(&mut *rng, &IrtfSchnorr::<C, H>::irtf(), &keys);
+  let sig = sign(&mut *rng, &IrtfSchnorr::<C, H>::irtf(), keys.clone(), machines, MSG);
   let group_key = keys[&Participant::new(1).unwrap()].group_key();
   assert!(sig.verify(offset_key, H::hram(&sig.R, &group_key, MSG)));
 }
@@ -277,7 +277,7 @@ pub fn test_schnorr_blame<R: RngCore + CryptoRng, C: Curve, H: Hram<C>>(rng: &mu
   const MSG: &[u8] = b"Hello, World!";
 
   let keys = key_gen(&mut *rng);
-  let machines = algorithm_machines(&mut *rng, &IetfSchnorr::<C, H>::ietf(), &keys);
+  let machines = algorithm_machines(&mut *rng, &IrtfSchnorr::<C, H>::irtf(), &keys);
 
   let (mut machines, shares) = preprocess_and_shares(&mut *rng, machines, |_, _| {}, MSG);
 

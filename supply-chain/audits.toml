@@ -1,0 +1,3589 @@
+
+# cargo-vet audits file
+
+[criteria.audited]
+description = "This crate was professionally audited."
+
+[criteria.reviewed]
+description = "This crate was reviewed by a member of Serai and found to be in good standing."
+implies = "safe-to-deploy"
+
+[[audits.aho-corasick]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.4 -> 1.1.5"
+
+[[audits.alloy-consensus]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.0.0"
+
+[[audits.alloy-consensus]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.0 -> 2.0.1"
+notes = """
+The release notes claim to avoid clones, but the added function still has a
+`Clone` bound which is questionable.
+"""
+
+[[audits.alloy-consensus]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.1 -> 2.0.4"
+notes = "Solely a version bump"
+
+[[audits.alloy-consensus]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.4 -> 2.0.5"
+
+[[audits.alloy-consensus]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.5 -> 2.1.0"
+
+[[audits.alloy-consensus]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.0 -> 2.1.1"
+
+[[audits.alloy-consensus]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.1 -> 2.2.0"
+
+[[audits.alloy-consensus]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.2.0 -> 2.4.1"
+notes = """
+If the type isn't `0`, this returns `UnexpectedType(0)`, e.g., the type it
+expected and not the unexpected type it found. That may be incorrect.
+"""
+
+[[audits.alloy-consensus]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+
+[[audits.alloy-consensus-any]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.0.0"
+
+[[audits.alloy-consensus-any]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.0 -> 2.0.4"
+notes = "Solely a version bump"
+
+[[audits.alloy-consensus-any]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.4 -> 2.0.5"
+notes = """
+This isn't sound though it is safe. See
+https://github.com/serai-dex/serai/issues/823.
+"""
+
+[[audits.alloy-consensus-any]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.5 -> 2.3.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-consensus-any]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.3.0 -> 2.4.1"
+
+[[audits.alloy-consensus-any]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+notes = "Solely a version bump"
+
+[[audits.alloy-core]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.5.7 -> 1.6.0"
+
+[[audits.alloy-core]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.6.0 -> 1.7.3"
+notes = "Solely a version bump"
+
+[[audits.alloy-eip2930]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.3 -> 0.2.4"
+notes = "I am not convinced `dedup` has a reliable order which is not a footgun."
+
+[[audits.alloy-eip7928]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.3 -> 0.3.5"
+
+[[audits.alloy-eip7928]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.5 -> 0.3.6"
+
+[[audits.alloy-eip7928]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.6 -> 0.3.7"
+
+[[audits.alloy-eip7928]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.7 -> 0.4.1"
+
+[[audits.alloy-eip7928]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.1 -> 0.4.4"
+notes = """
+I believe the `Rlp::decode` implementation may panic if the header declares a
+length for the body exceeding the length of the buffer. This is irrelevant to
+our usage though, and I'm not interested in submitting a PR about this.
+"""
+
+[[audits.alloy-eip7928]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.4 -> 0.4.5"
+notes = """
+This appears to be a breaking change, and to be honest, I'm unclear the intent
+for/use of this function. It seems perfectly safe however.
+"""
+
+[[audits.alloy-eip7928]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.5 -> 0.4.8"
+
+[[audits.alloy-eip7928]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.8 -> 0.4.9"
+
+[[audits.alloy-eip7928]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.9 -> 0.4.10"
+
+[[audits.alloy-eip7928]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.10 -> 0.4.11"
+
+[[audits.alloy-eips]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+
+[[audits.alloy-genesis]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "1.8.3 -> 2.0.0"
+
+[[audits.alloy-genesis]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.0.0 -> 2.0.5"
+notes = "Solely a version bump"
+
+[[audits.alloy-genesis]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.0.5 -> 2.1.0"
+
+[[audits.alloy-genesis]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.1.0 -> 2.2.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-genesis]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.2.0 -> 2.3.0"
+
+[[audits.alloy-genesis]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.3.0 -> 2.4.1"
+
+[[audits.alloy-genesis]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.4.1 -> 2.4.2"
+notes = "Solely a version bump"
+
+[[audits.alloy-json-abi]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.5.7 -> 1.6.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-json-abi]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.6.0 -> 1.6.1"
+
+[[audits.alloy-json-abi]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.6.1 -> 1.7.0"
+
+[[audits.alloy-json-abi]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.7.0 -> 1.7.3"
+notes = "Solely a version bump"
+
+[[audits.alloy-json-rpc]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.1.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-json-rpc]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.0 -> 2.1.1"
+
+[[audits.alloy-json-rpc]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.1 -> 2.2.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-json-rpc]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.2.0 -> 2.3.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-json-rpc]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.3.0 -> 2.4.1"
+
+[[audits.alloy-json-rpc]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+notes = "Solely a version bump"
+
+[[audits.alloy-json-rpc]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.2 -> 2.5.0"
+
+[[audits.alloy-network]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.0.0"
+
+[[audits.alloy-network]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.0 -> 2.0.4"
+notes = "Solely a version bump"
+
+[[audits.alloy-network]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.4 -> 2.0.5"
+
+[[audits.alloy-network]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.5 -> 2.1.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-network]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.0 -> 2.1.1"
+
+[[audits.alloy-network]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.1 -> 2.2.0"
+
+[[audits.alloy-network]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.2.0 -> 2.3.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-network]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.3.0 -> 2.4.1"
+
+[[audits.alloy-network]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+notes = "Solely a version bump"
+
+[[audits.alloy-network-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.0.0"
+
+[[audits.alloy-network-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.0 -> 2.0.5"
+notes = "Solely a version bump"
+
+[[audits.alloy-network-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.5 -> 2.1.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-network-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.0 -> 2.1.1"
+
+[[audits.alloy-network-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.1 -> 2.3.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-network-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.3.0 -> 2.4.1"
+
+[[audits.alloy-network-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+notes = "Solely a version bump"
+
+[[audits.alloy-node-bindings]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "1.8.3 -> 2.0.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-node-bindings]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.0.0 -> 2.0.1"
+
+[[audits.alloy-node-bindings]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.0.1 -> 2.0.4"
+
+[[audits.alloy-node-bindings]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.0.4 -> 2.0.5"
+
+[[audits.alloy-node-bindings]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.0.5 -> 2.2.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-node-bindings]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.2.0 -> 2.3.0"
+
+[[audits.alloy-node-bindings]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.3.0 -> 2.4.1"
+
+[[audits.alloy-node-bindings]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.4.1 -> 2.4.2"
+notes = "Solely a version bump"
+
+[[audits.alloy-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.5.7 -> 1.6.0"
+
+[[audits.alloy-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.6.0 -> 1.6.1"
+
+[[audits.alloy-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.6.1 -> 1.7.0"
+
+[[audits.alloy-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.7.0 -> 1.7.1"
+notes = "Solely a version bump"
+
+[[audits.alloy-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.7.1 -> 1.7.2"
+
+[[audits.alloy-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.7.2 -> 1.7.3"
+
+[[audits.alloy-provider]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.0.0"
+
+[[audits.alloy-provider]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.0 -> 2.0.1"
+
+[[audits.alloy-provider]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.1 -> 2.0.4"
+
+[[audits.alloy-provider]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.4 -> 2.0.5"
+
+[[audits.alloy-provider]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.5 -> 2.1.0"
+notes = """
+This adds futures of non-trivial complexity as features. I haven't audited
+their soundness in full, but I acknowledge they appear sufficiently tested.
+"""
+
+[[audits.alloy-provider]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.0 -> 2.1.1"
+
+[[audits.alloy-provider]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.1 -> 2.2.0"
+
+[[audits.alloy-provider]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.2.0 -> 2.4.1"
+
+[[audits.alloy-provider]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+
+[[audits.alloy-rlp-derive]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.15 -> 0.3.16"
+notes = "Solely a version bump"
+
+[[audits.alloy-rlp-derive]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.16 -> 0.3.17"
+
+[[audits.alloy-rpc-client]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.0.1"
+notes = "Solely a version bump"
+
+[[audits.alloy-rpc-client]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.1 -> 2.0.4"
+
+[[audits.alloy-rpc-client]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.4 -> 2.0.5"
+
+[[audits.alloy-rpc-client]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.5 -> 2.1.0"
+
+[[audits.alloy-rpc-client]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.0 -> 2.3.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-rpc-client]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.3.0 -> 2.4.1"
+
+[[audits.alloy-rpc-client]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+notes = "Solely a version bump"
+
+[[audits.alloy-rpc-client]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.2 -> 2.5.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-rpc-types-any]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.0.0"
+
+[[audits.alloy-rpc-types-any]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.0 -> 2.3.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-rpc-types-any]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.3.0 -> 2.4.1"
+
+[[audits.alloy-rpc-types-any]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+notes = "Solely a version bump"
+
+[[audits.alloy-rpc-types-debug]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.0.0"
+
+[[audits.alloy-rpc-types-debug]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.0 -> 2.4.2"
+notes = "Solely a version bump"
+
+[[audits.alloy-rpc-types-debug]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.2 -> 2.5.0"
+
+[[audits.alloy-rpc-types-eth]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.0.0"
+
+[[audits.alloy-rpc-types-eth]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.0 -> 2.0.4"
+notes = "Solely a version bump"
+
+[[audits.alloy-rpc-types-eth]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.4 -> 2.0.5"
+
+[[audits.alloy-rpc-types-eth]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.5 -> 2.1.0"
+
+[[audits.alloy-rpc-types-eth]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.0 -> 2.1.1"
+
+[[audits.alloy-rpc-types-eth]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.1 -> 2.2.0"
+
+[[audits.alloy-rpc-types-eth]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.2.0 -> 2.4.1"
+
+[[audits.alloy-rpc-types-eth]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+
+[[audits.alloy-rpc-types-trace]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.0.0"
+
+[[audits.alloy-rpc-types-trace]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.0 -> 2.0.1"
+
+[[audits.alloy-rpc-types-trace]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.1 -> 2.0.4"
+notes = "Solely a version bump"
+
+[[audits.alloy-rpc-types-trace]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.4 -> 2.0.5"
+
+[[audits.alloy-rpc-types-trace]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.5 -> 2.1.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-rpc-types-trace]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.0 -> 2.1.1"
+
+[[audits.alloy-rpc-types-trace]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.1 -> 2.3.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-rpc-types-trace]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.3.0 -> 2.4.1"
+
+[[audits.alloy-rpc-types-trace]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+notes = "Solely a version bump"
+
+[[audits.alloy-serde]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.0.0"
+notes = "I did not check the panic safety of this"
+
+[[audits.alloy-serde]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.0 -> 2.0.1"
+notes = "Solely a version bump"
+
+[[audits.alloy-serde]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.1 -> 2.0.4"
+
+[[audits.alloy-serde]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.4 -> 2.3.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-serde]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.3.0 -> 2.4.1"
+
+[[audits.alloy-serde]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+notes = "Solely a version bump"
+
+[[audits.alloy-serde]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.2 -> 2.5.0"
+
+[[audits.alloy-signer]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.1.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-signer]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.0 -> 2.1.1"
+
+[[audits.alloy-signer]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.1 -> 2.2.0"
+
+[[audits.alloy-signer]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.2.0 -> 2.3.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-signer]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.3.0 -> 2.4.1"
+
+[[audits.alloy-signer]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+notes = "Solely a version bump"
+
+[[audits.alloy-signer]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.2 -> 2.5.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-signer-local]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "1.8.3 -> 2.0.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-signer-local]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.0.0 -> 2.0.1"
+
+[[audits.alloy-signer-local]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.0.1 -> 2.0.4"
+notes = "Solely a version bump"
+
+[[audits.alloy-signer-local]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.0.4 -> 2.0.5"
+
+[[audits.alloy-signer-local]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.0.5 -> 2.1.0"
+
+[[audits.alloy-signer-local]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.1.0 -> 2.1.1"
+
+[[audits.alloy-signer-local]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.1.1 -> 2.2.0"
+
+[[audits.alloy-signer-local]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.2.0 -> 2.3.0"
+
+[[audits.alloy-signer-local]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.3.0 -> 2.4.1"
+
+[[audits.alloy-signer-local]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+delta = "2.4.1 -> 2.4.2"
+
+[[audits.alloy-sol-macro]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.5.7 -> 1.6.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-sol-macro-expander]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.5.7 -> 1.6.0"
+
+[[audits.alloy-sol-macro-input]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.5.7 -> 1.6.0"
+
+[[audits.alloy-sol-macro-input]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.6.0 -> 1.6.1"
+notes = "Solely a version bump"
+
+[[audits.alloy-sol-macro-input]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.6.1 -> 1.7.0"
+
+[[audits.alloy-sol-macro-input]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.7.0 -> 1.7.3"
+notes = "Solely a version bump"
+
+[[audits.alloy-sol-type-parser]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.5.7 -> 1.6.0"
+
+[[audits.alloy-sol-type-parser]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.6.0 -> 1.7.3"
+notes = "Solely a version bump"
+
+[[audits.alloy-sol-types]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.5.7 -> 1.6.0"
+notes = """
+This has a notable amount of `unsafe`. None of it seems actually unsafe, though
+it's hard to comment definitively without a full review of the crate.
+"""
+
+[[audits.alloy-transport]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.0.0"
+
+[[audits.alloy-transport]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.0 -> 2.0.4"
+notes = "Solely a version bump"
+
+[[audits.alloy-transport]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.4 -> 2.0.5"
+
+[[audits.alloy-transport]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.5 -> 2.2.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-transport]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.2.0 -> 2.4.1"
+notes = """
+I'm unclear why retrieving the backoff seconds from the response would not
+cause panics if not present.
+"""
+
+[[audits.alloy-transport]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+notes = "Solely a version bump"
+
+[[audits.alloy-transport]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.2 -> 2.5.0"
+
+[[audits.alloy-tx-macros]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.3 -> 2.1.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-tx-macros]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.0 -> 2.1.1"
+
+[[audits.alloy-tx-macros]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.1 -> 2.3.0"
+notes = "Solely a version bump"
+
+[[audits.alloy-tx-macros]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.3.0 -> 2.4.1"
+
+[[audits.alloy-tx-macros]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.4.2"
+notes = "Solely a version bump"
+
+[[audits.alloy-tx-macros]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.2 -> 2.5.0"
+notes = "Solely a version bump"
+
+[[audits.android_system_properties]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.5 -> 0.1.6"
+
+[[audits.anyhow]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.103 -> 1.0.104"
+
+[[audits.ark-ff]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.3.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.ark-ff]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.4.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.ark-ff]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.5.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.arrayref]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.3.9"
+notes = """
+As of Rust 1.93.0, there's `<[T]>::as_array` and `<[T]>::as_mut_array` which
+would be eligible to replace `array_ref!` and `array_mut_ref!` without
+`unsafe`. The only caveat would be how this bound-checks when taking the slice,
+then uses `unsafe` to cast to an array, while the `std` library option would
+bound-check when taking the slice _and_ check the length when casting (though
+this may be trivially optimized out).
+
+While I would add such a patch, that wouldn't cover the `array_refs!`,
+`mut_array_refs!` macros.
+"""
+
+[[audits.arrayvec]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.7.6 -> 0.7.7"
+
+[[audits.arrayvec]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.7.7 -> 0.7.8"
+notes = "No functional changes"
+
+[[audits.asn1-rs]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.7.1 -> 0.7.2"
+
+[[audits.asn1-rs-impl]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.2.0"
+notes = """
+This seems like a straightforward proc macro to convert a formatted input into
+an array. I am unfamiliar with the OID format and cannot comment this to be
+sound, and it appears to lack extensive testing, but the macro itself seems
+reasonable (even if using far too many dependencies) and the output safe.
+"""
+
+[[audits.aurora-engine-modexp]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "1.99.99"
+notes = "Re-implementation of the necessary subset of the `aurora-engine-modexp` API to consolidate arithmetic implementations"
+
+[[audits.autocfg]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.5.0 -> 1.5.1"
+
+[[audits.base16ct]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.2.0"
+notes = """
+This uses `unsafe` to hex-encoded data (in byte slices) to UTF-8 strings, which
+is safe so long as the encoder is always in range. While I didn't see an
+exhaustive test present, I did add a pair of tests for `encode_nibble` (one for
+lower, one for upper) to ensure its output is valid for any in-range input. I
+also manually checked its possible inputs are properly constrained to being a
+nibble. Accordingly, while concerns can be raised, this should be fine.
+"""
+
+[[audits.base16ct]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.0 -> 1.0.0"
+
+[[audits.base58ck]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.1.0"
+notes = "Not fuzz tested despite having novel arithmetic"
+
+[[audits.base58ck]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.0 -> 0.1.1"
+
+[[audits.bitcoin]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.32.8 -> 0.32.9"
+
+[[audits.bitcoin]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.32.9 -> 0.32.11"
+
+[[audits.bitcoin-io]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.1.4"
+notes = "Handrolls a `rust-version` approximate in its `build.rs`"
+
+[[audits.bitcoin-units]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.2 -> 0.1.3"
+
+[[audits.bitcoin-units]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.3 -> 0.1.4"
+
+[[audits.bitcoin_hashes]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.14.1 -> 0.14.2"
+
+[[audits.bitflags]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.13.0 -> 2.13.1"
+
+[[audits.bitflags]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.13.1 -> 2.13.2"
+
+[[audits.blake2]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.11.0-rc.5 -> 0.11.0-rc.6"
+
+[[audits.blake2]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.11.0-rc.6 -> 0.11.0"
+
+[[audits.borsh]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.6.1 -> 1.7.0"
+
+[[audits.borsh]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.7.0 -> 1.8.0"
+
+[[audits.borsh]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.0 -> 1.8.1"
+
+[[audits.borsh-derive]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.6.1 -> 1.7.0"
+
+[[audits.borsh-derive]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.7.0 -> 1.8.0"
+
+[[audits.borsh-derive]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.8.0 -> 1.8.1"
+
+[[audits.bytes]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.12.0 -> 1.12.1"
+
+[[audits.c-kzg]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "2.99.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.cc]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.2.59 -> 1.2.60"
+
+[[audits.cc]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.2.60 -> 1.2.61"
+
+[[audits.cc]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.2.61 -> 1.2.62"
+
+[[audits.cfg-if]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.4 -> 1.0.5"
+
+[[audits.cfg_aliases]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.1 -> 0.2.2"
+
+[[audits.chrono]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.44 -> 0.4.45"
+
+[[audits.ciphersuite]]
+criteria = "audited"
+version = "0.2.0"
+notes = "`/audits/crypto/Cypher Stack March 2023`, excluding the Ed448 ciphersuite"
+
+[[audits.clap]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "4.6.0 -> 4.6.1"
+
+[[audits.clap]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "4.6.1 -> 4.6.2"
+
+[[audits.clap]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "4.6.2 -> 4.6.3"
+notes = "Solely a version bump"
+
+[[audits.clap]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "4.6.3 -> 4.6.6"
+
+[[audits.clap]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "4.6.6 -> 4.6.7"
+
+[[audits.clap_builder]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "4.6.0 -> 4.6.2"
+
+[[audits.clap_builder]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "4.6.2 -> 4.6.6"
+
+[[audits.clap_builder]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "4.6.6 -> 4.6.7"
+
+[[audits.console]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.16.3 -> 0.16.4"
+
+[[audits.console]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.16.4 -> 0.16.6"
+
+[[audits.const-hex]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.18.1 -> 1.19.0"
+notes = """
+This adds support for the `0X` prefix, which I wouldn't consider well-defined,
+even if supporting more things is... supporting more things.
+"""
+
+[[audits.const-hex]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.19.0 -> 1.19.1"
+
+[[audits.const-random]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.1.18"
+notes = "While this is as it says, a separate question is if anyone should use this"
+
+[[audits.const-random-macro]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.1.16"
+notes = "While this is as it says, a separate question is if anyone should use this"
+
+[[audits.core-json]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.4.0"
+notes = "Written by kayabaNerve"
+
+[[audits.core-json-derive]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.4.1"
+notes = "Written by kayabaNerve"
+
+[[audits.core-json-traits]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.4.1"
+notes = "Written by kayabaNerve"
+
+[[audits.cpubits]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.1.1"
+notes = """
+I reviewed 0.1.0 but found it incorrect on 16-bit platforms, for which I opened
+a fix (https://github.com/RustCrypto/utils/pull/1470) which was merged for this
+0.1.1 release :tada:
+"""
+
+[[audits.cpufeatures]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.2.99"
+notes = "Patches from `0.2` to `0.3` whose only breaking change was a MSRV bump"
+
+[[audits.crc32fast]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.5.1 -> 1.5.2"
+
+[[audits.crc32fast]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.5.2 -> 1.5.3"
+
+[[audits.crypto-bigint]]
+criteria = "audited"
+version = "0.5.3"
+notes = "https://www.nccgroup.com/research/public-report-entropyrust-cryptography-review reviewed 0.5.2, with the fixes (and some other, presumably unaudited commits) released with 0.5.3"
+
+[[audits.crypto-common]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.1 -> 0.2.2"
+
+[[audits.dalek-ff-group]]
+criteria = "audited"
+version = "0.2.0"
+notes = "`/audits/crypto/Cypher Stack March 2023`"
+
+[[audits.dashmap]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "6.1.0 -> 6.2.1"
+
+[[audits.data-encoding]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.10.0 -> 2.11.0"
+
+[[audits.data-encoding]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.11.0 -> 2.11.1"
+notes = "Solely a version bump"
+
+[[audits.data-encoding-macro]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.19 -> 0.1.21"
+notes = "Solely a version bump"
+
+[[audits.data-encoding-macro-internal]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.17 -> 0.1.19"
+notes = "Solely a version bump"
+
+[[audits.deranged]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.5.8 -> 0.5.9"
+
+[[audits.derive-where]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.6.1 -> 1.7.0"
+
+[[audits.digest]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.11.2 -> 0.11.3"
+
+[[audits.dirs]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "6.0.0"
+
+[[audits.dirs]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "6.0.0 -> 7.0.0"
+
+[[audits.dkg]]
+criteria = "audited"
+version = "0.3.0"
+notes = "`/audits/crypto/Cypher Stack March 2023`"
+
+[[audits.dtoa]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "1.99.99"
+notes = "Patches to `zmij` which is by the same author, faster, and has an identical API"
+
+[[audits.ec-divisors]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.1.0@git:46135ae638ecab6b168a53c9b315242d00386754"
+importable = false
+
+[[audits.either]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "1.15.0"
+
+[[audits.either]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.15.0 -> 1.16.0"
+
+[[audits.either]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.16.0 -> 1.17.0"
+
+[[audits.either]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.17.0 -> 1.18.0"
+
+[[audits.either]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.18.0 -> 1.19.0"
+
+[[audits.enum-ordinalize]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "4.3.2 -> 4.4.1"
+
+[[audits.enum-ordinalize]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "4.4.1 -> 4.4.2"
+
+[[audits.enum-ordinalize-derive]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "4.3.2 -> 4.4.1"
+
+[[audits.enum-ordinalize-derive]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "4.4.1 -> 4.4.2"
+
+[[audits.env_filter]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "2.1.0"
+
+[[audits.equivalent]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.2 -> 1.0.3"
+
+[[audits.exit-future]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.2.0"
+
+[[audits.fastrand]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.0 -> 2.4.1"
+
+[[audits.fastrand]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.4.1 -> 2.5.0"
+
+[[audits.fastrlp]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.3.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.fastrlp]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.4.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.ff-group-tests]]
+criteria = "audited"
+version = "0.12.1"
+notes = "`/audits/crypto/Cypher Stack March 2023`"
+
+[[audits.flexible-transcript]]
+criteria = "audited"
+version = "0.3.0"
+notes = "`/audits/crypto/Cypher Stack March 2023`"
+
+[[audits.fnv]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "1.0.7"
+notes = "I have not confirmed any relation to the algorithm it claims to implement"
+
+[[audits.futures]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.32 -> 0.3.33"
+
+[[audits.futures]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.33 -> 0.3.34"
+
+[[audits.futures-channel]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.32 -> 0.3.33"
+
+[[audits.futures-channel]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.33 -> 0.3.34"
+notes = "Solely a version bump"
+
+[[audits.futures-core]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.32 -> 0.3.34"
+notes = "Solely a version bump"
+
+[[audits.futures-executor]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.32 -> 0.3.33"
+
+[[audits.futures-executor]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.33 -> 0.3.34"
+notes = "Solely a version bump"
+
+[[audits.futures-io]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.32 -> 0.3.34"
+notes = "Solely a version bump"
+
+[[audits.futures-macro]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.32 -> 0.3.33"
+notes = "Solely a version bump"
+
+[[audits.futures-macro]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.33 -> 0.3.34"
+notes = "Solely a version bump"
+
+[[audits.futures-sink]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.32 -> 0.3.34"
+notes = "Solely a version bump"
+
+[[audits.futures-task]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.32 -> 0.3.33"
+
+[[audits.futures-task]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.33 -> 0.3.34"
+
+[[audits.futures-timer]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "3.99.99"
+notes = """
+This is an API-(subset-)compatible implementation of `futures-timer` but by
+deferring to `tokio`. It's entirely safe and as accurate as `tokio`.
+"""
+
+[[audits.futures-timer]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "3.0.3 -> 3.0.4"
+notes = """
+If `Instant + Duration` overflows, this saturates to 30 years in the future, on
+the assumption that itself won't be an overflow. This is, IMO, a poor decision
+but I don't find it unsafe.
+"""
+
+[[audits.futures-util]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.33 -> 0.3.34"
+
+[[audits.futures-utils-wasm]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.1.0"
+
+[[audits.generalized-bulletproofs]]
+criteria = "audited"
+version = "0.1.0@git:46135ae638ecab6b168a53c9b315242d00386754"
+notes = "`monero-oxide/audits/generalized-bulletproofs`"
+
+[[audits.generalized-bulletproofs]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.1.0@git:46135ae638ecab6b168a53c9b315242d00386754"
+importable = false
+notes = "Written by kayabaNerve. The ZK proof itself needs further review"
+
+[[audits.generalized-bulletproofs]]
+criteria = "audited"
+version = "0.1.0@git:7d972e2b16fe57f4dfa4a9549d2fbb9306411704"
+notes = "`monero-oxide/audits/generalized-bulletproofs`"
+
+[[audits.generalized-bulletproofs-circuit-abstraction]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.1.0@git:46135ae638ecab6b168a53c9b315242d00386754"
+importable = false
+notes = "Written by kayabaNerve"
+
+[[audits.generalized-bulletproofs-circuit-abstraction]]
+criteria = "audited"
+version = "0.1.0@git:cebfb4bdff0c34ead77ba3f1d4e5610e934c581f"
+notes = "`monero-oxide/audits/fcmps`, including formal verification/security proofs for its gadgets"
+
+[[audits.generalized-bulletproofs-ec-gadgets]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.1.0@git:46135ae638ecab6b168a53c9b315242d00386754"
+importable = false
+notes = "Written by kayabaNerve"
+
+[[audits.generalized-bulletproofs-ec-gadgets]]
+criteria = "audited"
+version = "0.1.0@git:cebfb4bdff0c34ead77ba3f1d4e5610e934c581f"
+notes = "`monero-oxide/audits/fcmps`"
+
+[[audits.generic-array]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.4.4 -> 1.4.5"
+
+[[audits.getrandom]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.2 -> 0.4.3"
+
+[[audits.glob]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.3 -> 0.3.4"
+
+[[audits.hash-db]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.16.0"
+
+[[audits.hex-conservative]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.2 -> 0.2.3"
+
+[[audits.hex-literal]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "1.1.0"
+notes = "Lacking an exhaustive test for all 256 possible hex sequences"
+
+[[audits.http]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.4.2 -> 1.5.0"
+
+[[audits.http-body]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.1 -> 1.1.0"
+
+[[audits.http-body-util]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.3 -> 0.1.4"
+
+[[audits.http-body-util]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.4 -> 0.1.5"
+
+[[audits.humantime]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.3.0 -> 2.4.0"
+
+[[audits.hybrid-array]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.10 -> 0.4.11"
+
+[[audits.hybrid-array]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.11 -> 0.4.12"
+notes = "I did not confirm the several new numbers have correctly-defined bits."
+
+[[audits.hybrid-array]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.12 -> 0.4.13"
+
+[[audits.hybrid-array]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.13 -> 0.4.14"
+
+[[audits.hybrid-array]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.14 -> 0.4.15"
+
+[[audits.hyper-named-pipe]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.0 -> 0.1.1"
+
+[[audits.hyper-rustls]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.27.7 -> 0.27.9"
+
+[[audits.hyper-rustls]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.27.9 -> 0.27.10"
+
+[[audits.hyper-util]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.20 -> 0.1.21"
+
+[[audits.ident_case]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+version = "1.0.1"
+notes = """
+This crate silently assumes input string are ASCII and may panic on or not
+properly handle casing for Unicode characters.
+"""
+
+[[audits.igd-next]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.16.2 -> 0.17.1"
+
+[[audits.impl-codec]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.7.1"
+
+[[audits.indexmap]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.14.1 -> 2.14.2"
+
+[[audits.itoa]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "1.0.18"
+notes = "For soundness, I have assumed the validity of `div_rem_1e16`"
+
+[[audits.jni]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.22.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.jobserver]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.34 -> 0.1.35"
+notes = """
+With an environment variable, older versions of `make`
+(which should be supported) can be converted into panics. This should be
+`safe-to-run`, but the question is why this isn't solely a build dependency. It
+appears to be a misclassification premised on `cc` being a `dev-dependency` of
+some of our crates.
+"""
+
+[[audits.jsonrpsee]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.24.10 -> 0.24.11"
+notes = "Solely a version bump"
+
+[[audits.jsonrpsee-core]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.24.10 -> 0.24.11"
+
+[[audits.jsonrpsee-proc-macros]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.24.10 -> 0.24.11"
+notes = "Solely a version bump"
+
+[[audits.jsonrpsee-server]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.24.10 -> 0.24.11"
+
+[[audits.jsonrpsee-types]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.24.10 -> 0.24.11"
+notes = "Solely a version bump"
+
+[[audits.k256]]
+criteria = "audited"
+version = "0.13.2"
+notes = "https://www.nccgroup.com/research/public-report-entropyrust-cryptography-review reviewed 0.13.1, with the fixes (and some other, presumably unaudited commits) released with 0.13.2"
+
+[[audits.keccak]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.0 -> 0.2.1"
+
+[[audits.keccak]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.1 -> 0.2.2"
+
+[[audits.lazy_static]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "1.99.99"
+notes = "Re-implementation of a sufficient approximation of the `lazy_static` API around `std::sync::LazyLock`"
+
+[[audits.libp2p]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.57.0 -> 0.57.1"
+
+[[audits.libp2p-dns]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.45.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.libp2p-gossipsub]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.49.4 -> 0.49.5"
+
+[[audits.libp2p-gossipsub]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.50.0 -> 0.50.1"
+
+[[audits.libp2p-identity]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.14 -> 0.3.0"
+
+[[audits.libp2p-identity]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.0 -> 0.3.1"
+
+[[audits.libp2p-quic]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.14.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.libz-sys]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.30 -> 1.1.31"
+
+[[audits.log]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.29 -> 0.4.32"
+
+[[audits.log]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.32 -> 0.4.33"
+
+[[audits.log]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.33 -> 0.4.34"
+
+[[audits.log]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.34 -> 0.4.35"
+notes = "Solely a version bump"
+
+[[audits.lru]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.18.4 -> 0.18.5"
+
+[[audits.macro-string]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.4 -> 0.2.0"
+
+[[audits.memfd]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.6.5 -> 0.6.6"
+
+[[audits.modular-frost]]
+criteria = "audited"
+version = "0.6.0"
+notes = "`/audits/crypto/Cypher Stack March 2023`, excluding the Ed448 ciphersuite"
+
+[[audits.monero-address]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.1.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-address]]
+criteria = "audited"
+version = "0.1.0@git:d5077ae9662f54b6a8a399a1ecdfefa0115b8cf7"
+notes = "`monero-oxide/audits/Cypher Stack May 2025`"
+
+[[audits.monero-base58]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.1.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-borromean]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.1.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-borromean]]
+criteria = "audited"
+version = "0.1.0@git:d5077ae9662f54b6a8a399a1ecdfefa0115b8cf7"
+notes = "`monero-oxide/audits/Cypher Stack May 2025`"
+
+[[audits.monero-bulletproofs]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.1.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-bulletproofs]]
+criteria = "audited"
+version = "0.1.0@git:d5077ae9662f54b6a8a399a1ecdfefa0115b8cf7"
+notes = "`monero-oxide/audits/Cypher Stack May 2025`"
+
+[[audits.monero-bulletproofs-generators]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.1.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-clsag]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.1.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-clsag]]
+criteria = "audited"
+version = "0.1.0@git:d5077ae9662f54b6a8a399a1ecdfefa0115b8cf7"
+notes = "`monero-oxide/audits/Cypher Stack May 2025`"
+
+[[audits.monero-daemon-rpc]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.2.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-ed25519]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.1.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-epee]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.2.1"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-interface]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.2.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-io]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.1.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-mlsag]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.1.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-mlsag]]
+criteria = "audited"
+version = "0.1.0@git:d5077ae9662f54b6a8a399a1ecdfefa0115b8cf7"
+notes = "`monero-oxide/audits/Cypher Stack May 2025`"
+
+[[audits.monero-oxide]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.1.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-oxide]]
+criteria = "audited"
+version = "0.1.4-alpha@git:d5077ae9662f54b6a8a399a1ecdfefa0115b8cf7"
+notes = "`monero-oxide/audits/Cypher Stack May 2025`, while named `monero-serai`"
+
+[[audits.monero-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.1.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-primitives]]
+criteria = "audited"
+version = "0.1.0@git:d5077ae9662f54b6a8a399a1ecdfefa0115b8cf7"
+notes = "`monero-oxide/audits/Cypher Stack May 2025`"
+
+[[audits.monero-simple-request-rpc]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.1.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.monero-wallet]]
+criteria = "audited"
+version = "0.1.0@git:d5077ae9662f54b6a8a399a1ecdfefa0115b8cf7"
+notes = "`monero-oxide/audits/Cypher Stack May 2025`"
+
+[[audits.monero-wallet]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "reviewed"
+version = "0.2.0"
+importable = false
+notes = "kayabaNerve is a maintainer of `monero-oxide`"
+
+[[audits.multiaddr]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.18.2 -> 0.19.0"
+
+[[audits.multiaddr]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.19.0 -> 0.19.1"
+
+[[audits.multiexp]]
+criteria = "audited"
+version = "0.3.0"
+notes = "`/audits/crypto/Cypher Stack March 2023`"
+
+[[audits.multiexp]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.4.2"
+notes = "Old version of a crate from this repository."
+
+[[audits.multihash-codetable]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.2.2"
+notes = """
+I did not confirm the provided codetable follows any intended specification.
+
+This uses `max` to index a slice for RustCrypto-backed hashes and for
+`blake2b_simd`-backed hashes, when I believe it should be `min`. This doesn't
+matter for the RustCrypto-backed hashes, as they're exactly sized, and doesn't
+matter for the `blake2b_simd`-backed hashes, as the `as_bytes` method provides
+an output of length equal to the requested output length. This makes the `max`
+call pointless (as both operands are equal), but it still seems invalid.
+"""
+
+[[audits.multihash-derive]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.8.1 -> 0.9.3"
+
+[[audits.multihash-derive-impl]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.1.3"
+
+[[audits.netlink-proto]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.12.0 -> 0.12.1"
+
+[[audits.netlink-proto]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.12.1 -> 0.12.2"
+
+[[audits.nohash-hasher]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.2.0"
+notes = """
+This uses a marker trait to enforce a runtime contract over how
+`<T as Hash>::hash` is actually implemented, panicking if not satisfied (when
+`debug_assertions` is enabled). This is reasonably documented however.
+"""
+
+[[audits.nonmax]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.5.5"
+notes = """
+This crate is clever and I understand why one wouldn't want to simply declare
+it directly, instead deferring to a crate. However, the crate as a whole,
+despite being well done, seems like a non-trivial supply-chain risk. Here, this
+isn't an issue due to `cargo vet`, but I do question it being adopted by
+`revm`.
+"""
+
+[[audits.nonzero_ext]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.3.99"
+
+[[audits.num-conv]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.2.1"
+
+[[audits.num-conv]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.1 -> 0.2.2"
+
+[[audits.opaque-debug]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.3.1"
+
+[[audits.openssl-probe]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.1 -> 0.2.2"
+
+[[audits.option-ext]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.2.99"
+notes = "MIT re-implementation of the necessary subset of the copyleft `option-ext`"
+
+[[audits.pin-project]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.11 -> 1.1.12"
+
+[[audits.pin-project]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.12 -> 1.1.13"
+
+[[audits.pin-project-internal]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.11 -> 1.1.12"
+
+[[audits.pin-project-internal]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.12 -> 1.1.13"
+
+[[audits.pin-utils]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.0 -> 0.1.1"
+
+[[audits.pkg-config]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.32 -> 0.3.33"
+
+[[audits.pkg-config]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.33 -> 0.3.34"
+
+[[audits.powerfmt]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.0 -> 0.2.1"
+
+[[audits.primitive-types]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.12.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.proc-macro2]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.106 -> 1.0.107"
+
+[[audits.prost]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.14.3 -> 0.14.4"
+
+[[audits.prost-build]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.14.3 -> 0.14.4"
+
+[[audits.prost-derive]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.14.3 -> 0.14.4"
+
+[[audits.prost-types]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.14.3 -> 0.14.4"
+notes = "Solely a version bump"
+
+[[audits.quinn-proto]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.11.14 -> 0.11.15"
+
+[[audits.quinn-udp]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.5.14 -> 0.5.15"
+
+[[audits.quote]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.46 -> 1.0.47"
+
+[[audits.rand]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.8.5 -> 0.8.6"
+
+[[audits.rand]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.8.6 -> 0.8.7"
+
+[[audits.rand]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.8.7 -> 0.8.8"
+
+[[audits.rand]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.9.2 -> 0.9.4"
+
+[[audits.rand]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.9.4 -> 0.9.5"
+
+[[audits.rapidhash]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "4.99.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.ref-cast]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.25 -> 1.0.27"
+
+[[audits.ref-cast-impl]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.25 -> 1.0.27"
+
+[[audits.regex]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.12.3 -> 1.12.4"
+notes = "Solely a version bump"
+
+[[audits.regex]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.12.4 -> 1.13.0"
+
+[[audits.regex]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.13.0 -> 1.13.1"
+
+[[audits.regex-automata]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.16 -> 0.4.18"
+
+[[audits.revm]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "36.0.0 -> 37.0.0"
+
+[[audits.revm]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "37.0.0 -> 38.0.0"
+notes = "Solely a version bump"
+
+[[audits.revm]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "38.0.0 -> 40.0.0"
+
+[[audits.revm]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "40.0.0 -> 40.0.2"
+notes = "Solely a version bump"
+
+[[audits.revm]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "40.0.2 -> 41.0.0"
+
+[[audits.revm]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "41.0.0 -> 42.0.1"
+
+[[audits.revm]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "42.0.1 -> 43.0.0"
+
+[[audits.revm]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.0 -> 43.0.2"
+notes = "Solely a version bump"
+
+[[audits.revm]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.2 -> 43.0.3"
+
+[[audits.revm-bytecode]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "10.0.0 -> 11.0.0"
+notes = """
+This does add `unsafe`, yet where the functions were already `unsafe` but
+simply not properly annotated. Accordingly, this is safer than it was.
+"""
+
+[[audits.revm-bytecode]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "11.0.0 -> 41.0.0"
+
+[[audits.revm-bytecode]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "41.0.0 -> 42.0.0"
+notes = """
+This prevents a panic on an OOB index by not advancing by the specified length,
+but the minimum of the specified length and the remaining length. I'm unsure
+the implicications of that for correctness.
+"""
+
+[[audits.revm-bytecode]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "42.0.0 -> 43.0.0"
+notes = "Solely a version bump"
+
+[[audits.revm-context]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "16.0.0 -> 16.0.1"
+notes = "Solely a version bump"
+
+[[audits.revm-context]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "16.0.1 -> 18.0.1"
+
+[[audits.revm-context]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "18.0.1 -> 18.0.2"
+notes = "Solely a version bump"
+
+[[audits.revm-context]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "18.0.2 -> 41.0.0"
+
+[[audits.revm-context]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "41.0.0 -> 42.0.0"
+
+[[audits.revm-context]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "42.0.0 -> 43.0.0"
+
+[[audits.revm-context]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.0 -> 43.0.1"
+
+[[audits.revm-context]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.1 -> 43.0.2"
+notes = "Solely a version bump"
+
+[[audits.revm-context]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.2 -> 43.0.3"
+
+[[audits.revm-context-interface]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "17.0.0 -> 17.0.1"
+
+[[audits.revm-context-interface]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "17.0.1 -> 19.0.2"
+notes = "No comment on the soundness of this/relation to the EVM specification."
+
+[[audits.revm-context-interface]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "19.0.2 -> 41.0.0"
+
+[[audits.revm-context-interface]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "41.0.0 -> 42.0.0"
+
+[[audits.revm-context-interface]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "42.0.0 -> 43.0.0"
+
+[[audits.revm-context-interface]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.0 -> 43.0.1"
+
+[[audits.revm-context-interface]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.1 -> 43.0.2"
+
+[[audits.revm-database]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "12.0.0 -> 13.0.0"
+
+[[audits.revm-database]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "13.0.0 -> 13.0.1"
+notes = "Solely a version bump"
+
+[[audits.revm-database]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "13.0.1 -> 15.0.0"
+
+[[audits.revm-database]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "15.0.0 -> 15.0.1"
+notes = "Solely a version bump"
+
+[[audits.revm-database]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "15.0.1 -> 41.0.0"
+
+[[audits.revm-database]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "41.0.0 -> 42.0.0"
+
+[[audits.revm-database]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "42.0.0 -> 43.0.0"
+
+[[audits.revm-database]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.0 -> 43.0.1"
+
+[[audits.revm-database-interface]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.0 -> 43.0.1"
+notes = "Solely a version bump"
+
+[[audits.revm-handler]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "18.0.0 -> 18.1.0"
+
+[[audits.revm-handler]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "18.1.0 -> 20.0.2"
+notes = "No comment on the soundness of this/relation to the EVM specification."
+
+[[audits.revm-handler]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "20.0.2 -> 41.0.0"
+
+[[audits.revm-handler]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "41.0.0 -> 42.0.1"
+
+[[audits.revm-handler]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "42.0.1 -> 43.0.0"
+
+[[audits.revm-handler]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.0 -> 43.0.2"
+
+[[audits.revm-handler]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.2 -> 43.0.3"
+notes = "Solely a version bump"
+
+[[audits.revm-inspector]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "18.0.0 -> 19.0.0"
+
+[[audits.revm-inspector]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "19.0.0 -> 21.0.1"
+
+[[audits.revm-inspector]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "21.0.1 -> 21.0.2"
+notes = "Solely a version bump"
+
+[[audits.revm-inspector]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "21.0.2 -> 41.0.0"
+
+[[audits.revm-inspector]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "41.0.0 -> 42.0.1"
+
+[[audits.revm-inspector]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "42.0.1 -> 43.0.0"
+notes = "Solely a version bump"
+
+[[audits.revm-inspector]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.0 -> 43.0.2"
+notes = "Solely a version bump due to 43.0.2 reverting 43.0.1"
+
+[[audits.revm-inspector]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.2 -> 43.0.3"
+notes = "Solely a version bump"
+
+[[audits.revm-interpreter]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "37.0.2 -> 41.0.0"
+
+[[audits.revm-interpreter]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "41.0.0 -> 42.0.0"
+
+[[audits.revm-interpreter]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "42.0.0 -> 43.0.0"
+
+[[audits.revm-interpreter]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.0 -> 43.0.1"
+notes = "Solely a version bump"
+
+[[audits.revm-interpreter]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.1 -> 43.0.2"
+notes = "Solely a version bump"
+
+[[audits.revm-precompile]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "36.0.2 -> 41.0.0"
+notes = "This adds a benchmark for `modexp` and has no functional changes."
+
+[[audits.revm-precompile]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "41.0.0 -> 42.0.1"
+
+[[audits.revm-precompile]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "42.0.1 -> 43.0.0"
+
+[[audits.revm-precompile]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.0 -> 43.0.1"
+
+[[audits.revm-precompile]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.1 -> 43.0.2"
+notes = "Solely a version bump"
+
+[[audits.revm-precompile]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.2 -> 43.0.3"
+notes = "Solely a version bump"
+
+[[audits.revm-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "23.0.0 -> 24.0.0"
+notes = """
+`TARGET_STATE_GROWTH_PER_YEAR` seems incorrect, as the current EIP 8037 seems
+to define it as 120 GiB (not 100, though this may a change not yet reflected).
+I'm unclear about `CPSB_OFFSET, CPSB_SIGNIFICANT_BITS` and
+`EIP7702_PER_EMPTY_ACCOUNT_REGULAR` does not appear to have a value declared on
+its EIP yet. The potential issues with these constants (for potential future
+hard forks) doesn't make this unsafe however.
+"""
+
+[[audits.revm-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "24.0.0 -> 41.0.0"
+
+[[audits.revm-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "41.0.0 -> 42.0.0"
+
+[[audits.revm-primitives]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "42.0.0 -> 43.0.0"
+notes = "I did not verify the accuracy of these constants"
+
+[[audits.revm-state]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "10.0.0 -> 11.0.0"
+
+[[audits.revm-state]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "11.0.0 -> 11.0.1"
+
+[[audits.revm-state]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "11.0.1 -> 12.0.0"
+notes = "No comment on the soundness of this/relation to the EVM specification."
+
+[[audits.revm-state]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "12.0.0 -> 41.0.0"
+
+[[audits.revm-state]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "41.0.0 -> 42.0.0"
+
+[[audits.revm-state]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "42.0.0 -> 43.0.0"
+
+[[audits.revm-state]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "43.0.0 -> 43.0.1"
+
+[[audits.rlp]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.5.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.rocksdb]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.24.99"
+
+[[audits.rustc-hash]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.2 -> 2.1.3"
+
+[[audits.rustc-hex]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "2.99.99"
+notes = """
+`rustc-hex` is used for a single `struct`, as confirmed by the compiler
+accepting a `rustc-hex` which only provides said single `struct`. The provided
+implementation is minimal, tested, with the CI continually running tests on it.
+The replacement is zero-dependency and avoids a potential issue in the upstream
+`rustc-hex`, where non-hex characters were directly present in the `Display`
+implementation for `FromHexError`.
+"""
+
+[[audits.rustls-native-certs]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.8.3 -> 0.8.4"
+
+[[audits.rustls-native-certs]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.8.4 -> 0.8.5"
+
+[[audits.rustls-pki-types]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.14.0 -> 1.14.1"
+notes = """
+This adds a hard limit of 256 MB per PEM, which may be a practical bound, but
+with the way it's written, seems to be an implementation detail. That raises
+the question of if such a limit is sound and whether this could lead to
+fingerprinting/something approximate to a netsplit.
+"""
+
+[[audits.rustls-pki-types]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.14.1 -> 1.15.0"
+
+[[audits.rustls-pki-types]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.15.0 -> 1.15.1"
+
+[[audits.rustls-webpki]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.103.12 -> 0.103.13"
+notes = """
+This primarily fixes RUSTSEC-2026-0104 by rejecting cases with padding, without
+bits. The RUSTSEC advisory notes this syntactically valid, but here it's
+declared to have invalid semantics. I'm unsure what the semantics of these
+should be and cannot comment if that's correct or not.
+"""
+
+[[audits.rustls-webpki]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.103.13 -> 0.103.14"
+
+[[audits.rustls-webpki]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.103.14 -> 0.103.15"
+
+[[audits.rustls-webpki]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.103.15 -> 0.103.16"
+
+[[audits.rustversion]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.22 -> 1.0.23"
+
+[[audits.rw-stream-sink]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.4.0 -> 0.5.0"
+
+[[audits.ryu]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "1.99.99"
+notes = "Patches to `zmij` which is by the same author, faster, and has a nearly-identical API. The unsafe `raw` module is omitted, but the fact this codebase compiles proves it had no active consumers"
+
+[[audits.schannel]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.29 -> 0.1.30"
+
+[[audits.schnorr-signatures]]
+criteria = "audited"
+version = "0.3.0"
+notes = "`/audits/crypto/Cypher Stack March 2023`"
+
+[[audits.secp256k1]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.30.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.secp256k1]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.31.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.serde]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.228 -> 1.0.229"
+
+[[audits.serde_core]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.228 -> 1.0.229"
+
+[[audits.serde_json]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.151 -> 1.0.154"
+
+[[audits.serde_repr]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.20 -> 0.1.21"
+
+[[audits.serde_spanned]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.1 -> 1.1.2"
+
+[[audits.serde_with_macros]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "3.18.0 -> 3.21.0"
+
+[[audits.sha1]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.10.6 -> 0.10.7"
+
+[[audits.sha3]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.10.8 -> 0.10.9"
+
+[[audits.sha3]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.11.0 -> 0.12.0"
+notes = """
+I did not review the correctness/soundness of the implementation, solely
+its memory safety.
+"""
+
+[[audits.shake]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.1.0"
+notes = """
+I did not review the correctness/soundness of the implementation, solely
+its memory safety.
+
+Its `Debug` implementation panics with `unreachable` if for a public `struct`,
+which is publicly configurable, it has a non-standard constant as its generic.
+"""
+
+[[audits.snap]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.1 -> 1.1.2"
+
+[[audits.socket2]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.6.4 -> 0.6.5"
+
+[[audits.spin]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.12.1 -> 0.12.2"
+
+[[audits.spin]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.12.2 -> 0.12.3"
+
+[[audits.sponge-cursor]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.1.0"
+notes = """
+I did not review the correctness/soundness of the implementation, solely
+its memory safety.
+"""
+
+[[audits.stable_deref_trait]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "1.2.1"
+
+[[audits.syn]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.118 -> 2.0.119"
+
+[[audits.syn-solidity]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.5.7 -> 1.6.0"
+
+[[audits.syn-solidity]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.6.0 -> 1.6.1"
+
+[[audits.syn-solidity]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.6.1 -> 1.7.3"
+notes = "Solely a version bump"
+
+[[audits.thiserror]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.18 -> 2.0.20"
+
+[[audits.thiserror]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.20 -> 2.0.21"
+
+[[audits.thiserror-impl]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.18 -> 2.0.20"
+
+[[audits.thiserror-impl]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.0.20 -> 2.0.21"
+
+[[audits.time-macros]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.29 -> 0.2.30"
+
+[[audits.time-macros]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.30 -> 0.2.31"
+
+[[audits.time-macros]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.31 -> 0.2.32"
+
+[[audits.tinyvec]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.11.0 -> 1.12.0"
+
+[[audits.tinyvec]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.12.0 -> 1.13.2"
+
+[[audits.tinyvec]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.13.2 -> 1.13.3"
+
+[[audits.tokio-macros]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.7.0 -> 2.7.1"
+
+[[audits.tokio-macros]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.7.1 -> 2.7.2"
+
+[[audits.tokio-rustls]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.26.4 -> 0.26.5"
+
+[[audits.tokio-rustls]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.26.5 -> 0.26.6"
+
+[[audits.toml]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.2+spec-1.1.0 -> 1.1.3+spec-1.1.0"
+
+[[audits.toml]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.3+spec-1.1.0 -> 1.1.4+spec-1.1.0"
+
+[[audits.toml]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.4+spec-1.1.0 -> 1.1.5+spec-1.1.0"
+
+[[audits.toml]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.5+spec-1.1.0 -> 1.1.6+spec-1.1.0"
+
+[[audits.toml]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.6+spec-1.1.0 -> 1.1.8+spec-1.1.0"
+
+[[audits.toml_datetime]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.1+spec-1.1.0 -> 1.1.2+spec-1.1.0"
+
+[[audits.toml_edit]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.25.10+spec-1.1.0 -> 0.25.11+spec-1.1.0"
+
+[[audits.toml_edit]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.25.11+spec-1.1.0 -> 0.25.12+spec-1.1.0"
+
+[[audits.toml_edit]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.25.12+spec-1.1.0 -> 0.25.13+spec-1.1.0"
+
+[[audits.toml_edit]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.25.13+spec-1.1.0 -> 0.25.14+spec-1.1.0"
+
+[[audits.toml_edit]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.25.14+spec-1.1.0 -> 0.25.15+spec-1.1.0"
+
+[[audits.toml_edit]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.25.15+spec-1.1.0 -> 0.25.17+spec-1.1.0"
+
+[[audits.toml_parser]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.2+spec-1.1.0 -> 1.1.3+spec-1.1.0"
+
+[[audits.toml_parser]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.1.3+spec-1.1.0 -> 1.1.5+spec-1.1.0"
+
+[[audits.tuplex]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.1.2"
+
+[[audits.typenum]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.19.0 -> 1.20.0"
+notes = """
+This includes an auto-generated (non-bootstapped) test file, formerly generated
+by a build script, accepted here due to only being a test. Additionally, this
+could be considered a breaking change due to the removal of deprecated
+features.
+"""
+
+[[audits.typenum]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.20.0 -> 1.20.1"
+
+[[audits.uint]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.10.0 -> 0.10.1"
+
+[[audits.uint]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.10.1 -> 0.10.2"
+
+[[audits.want]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-run"
+version = "0.3.1"
+notes = "Undocumented panic prevents `safe-to-deploy`, see https://github.com/seanmonstar/want/pull/5"
+
+[[audits.want]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.1 -> 0.3.2"
+
+[[audits.wasm-bindgen-futures]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.4.58"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.wasm-bindgen-macro]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.128 -> 0.2.129"
+
+[[audits.wasm-bindgen-shared]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.128 -> 0.2.129"
+
+[[audits.webpki-roots]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.6 -> 1.0.7"
+
+[[audits.webpki-roots]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.7 -> 1.0.8"
+
+[[audits.webpki-roots]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.8 -> 1.0.9"
+
+[[audits.webpki-roots]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.9 -> 1.0.11"
+
+[[audits.winnow]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.1 -> 1.0.2"
+
+[[audits.winnow]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.2 -> 1.0.3"
+
+[[audits.winnow]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.3 -> 1.0.4"
+
+[[audits.wit-bindgen-rust-macro]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.51.99"
+notes = "Stub which never compiles to manually trim its subtree from our `Cargo.lock`"
+
+[[audits.yamux]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.14.0 -> 0.14.1"
+
+[[audits.zeroize_derive]]
+who = "Luke Parker <lukeparker5132@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.4.3 -> 1.5.0"
+
+[[trusted.cranelift-assembler-x64]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.cranelift-assembler-x64-meta]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.cranelift-bforest]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.cranelift-bitset]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.cranelift-codegen]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.cranelift-codegen-meta]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.cranelift-codegen-shared]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.cranelift-control]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.cranelift-entity]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.cranelift-frontend]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.cranelift-isle]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.cranelift-native]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.cranelift-srcgen]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.hashbrown]]
+criteria = "safe-to-deploy"
+user-id = 55123 # rust-lang-owner
+start = "2025-04-30"
+end = "2027-04-09"
+notes = "Trusted due to rust-lang"
+
+[[trusted.libc]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:rust-lang/libc"
+start = "2024-08-15"
+end = "2027-04-09"
+notes = "Trusted due to rust-lang and infeasibility of auditing"
+
+[[trusted.pulley-interpreter]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.pulley-macros]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.rustc-demangle]]
+criteria = "safe-to-deploy"
+user-id = 55123 # rust-lang-owner
+start = "2023-03-23"
+end = "2027-04-20"
+notes = "Trusted due to rust-lang"
+
+[[trusted.wasm-encoder]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasm-tools"
+start = "2025-08-14"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.wasmparser]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasm-tools"
+start = "2025-08-14"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.wasmprinter]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasm-tools"
+start = "2025-08-14"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.wasmtime]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.wasmtime-environ]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.wasmtime-internal-component-util]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-06-24"
+
+[[trusted.wasmtime-internal-core]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-02-24"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.wasmtime-internal-cranelift]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.wasmtime-internal-fiber]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.wasmtime-internal-jit-debug]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.wasmtime-internal-jit-icache-coherence]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.wasmtime-internal-unwinder]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.wasmtime-internal-versioned-export-macros]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:bytecodealliance/wasmtime"
+start = "2026-01-07"
+end = "2027-04-20"
+notes = "Trusted due to bytecodealliance and infeasibility of auditing"
+
+[[trusted.windows]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-01-15"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows-collections]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2025-02-06"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows-core]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-11-15"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows-future]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2025-02-10"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows-implement]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2022-01-27"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows-interface]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2022-02-18"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows-link]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2024-07-17"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows-numerics]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2023-05-15"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows-registry]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2024-02-15"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows-result]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2024-02-02"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows-strings]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2024-02-02"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows-sys]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-11-15"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows-targets]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2022-09-09"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows-threading]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2025-04-29"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows_aarch64_gnullvm]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2022-09-01"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows_aarch64_msvc]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-11-05"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows_i686_gnu]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-10-28"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows_i686_gnullvm]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2024-04-02"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows_i686_msvc]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-10-27"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows_x86_64_gnu]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-10-28"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows_x86_64_gnullvm]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2022-09-01"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"
+
+[[trusted.windows_x86_64_msvc]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-10-27"
+end = "2027-04-06"
+notes = "Trusted as reasonable and due to infeasibility of auditing"

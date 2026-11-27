@@ -1,0 +1,39 @@
+[package]
+name = "serai-processor-scanner"
+version = "0.1.0"
+description = "Scanner of abstract blockchains for Serai"
+license = "AGPL-3.0-only"
+repository = "https://github.com/serai-dex/serai/tree/develop/processor/scanner"
+authors = ["Luke Parker <lukeparker5132@gmail.com>"]
+keywords = []
+edition = "2024"
+publish = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true
+
+[dependencies]
+# Encoders
+hex = { version = "0.4", default-features = false, features = ["std"] }
+borsh = { version = "1", default-features = false, features = ["std", "derive", "de_strict_order"] }
+
+# Cryptography
+blake2 = { version = "0.11", default-features = false, features = ["alloc"] }
+group = { version = "0.13", default-features = false }
+
+# Application
+log = { version = "0.4", default-features = false, features = ["std"] }
+tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "sync", "time", "macros"] }
+
+serai-db = { path = "../../common/db", default-features = false, features = ["std", "schema"] }
+
+messages = { package = "serai-processor-messages", path = "../messages" }
+
+serai-primitives = { path = "../../substrate/primitives", default-features = false, features = ["std"] }
+
+primitives = { package = "serai-processor-primitives", path = "../primitives" }
+scheduler-primitives = { package = "serai-processor-scheduler-primitives", path = "../scheduler/primitives" }

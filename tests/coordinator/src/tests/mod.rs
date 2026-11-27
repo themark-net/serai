@@ -1,6 +1,8 @@
 use core::future::Future;
 use std::{sync::OnceLock, collections::HashMap};
 
+use ciphersuite::WrappedGroup;
+
 use tokio::sync::Mutex;
 
 use dockertest::{
@@ -19,7 +21,7 @@ mod batch;
 pub use batch::batch;
 
 mod sign;
-#[allow(unused_imports)]
+#[expect(unused_imports)]
 pub use sign::sign;
 
 mod rotation;
@@ -41,6 +43,18 @@ impl<F: Send + Future, TB: 'static + Send + Sync + Fn(Vec<Processor>) -> F> Test
   }
 }
 
+fn name(i: usize) -> &'static str {
+  match i {
+    0 => "Alice",
+    1 => "Bob",
+    2 => "Charlie",
+    3 => "Dave",
+    4 => "Eve",
+    5 => "Ferdie",
+    _ => panic!("needed a 7th name for a serai node"),
+  }
+}
+
 pub(crate) async fn new_test(test_body: impl TestBody, fast_epoch: bool) {
   let mut unique_id_lock = UNIQUE_ID.get_or_init(|| Mutex::new(0)).lock().await;
 
@@ -48,17 +62,9 @@ pub(crate) async fn new_test(test_body: impl TestBody, fast_epoch: bool) {
   let mut test = DockerTest::new().with_network(dockertest::Network::Isolated);
   let mut coordinator_compositions = vec![];
   // Spawn one extra coordinator which isn't in-set
-  #[allow(clippy::range_plus_one)]
+  #[expect(clippy::range_plus_one)]
   for i in 0 .. (COORDINATORS + 1) {
-    let name = match i {
-      0 => "Alice",
-      1 => "Bob",
-      2 => "Charlie",
-      3 => "Dave",
-      4 => "Eve",
-      5 => "Ferdie",
-      _ => panic!("needed a 7th name for a serai node"),
-    };
+    let name = name(i);
     let serai_composition = serai_composition(name, fast_epoch);
 
     let (processor_key, message_queue_keys, message_queue_composition) =
@@ -91,7 +97,7 @@ pub(crate) async fn new_test(test_body: impl TestBody, fast_epoch: bool) {
           .set_start_policy(StartPolicy::Strict)
           .set_handle(handle.clone())
           .set_log_options(Some(LogOptions {
-            action: if std::env::var("GITHUB_CI") == Ok("true".to_string()) {
+            action: if std::env::var("GITHUB_CI") == Ok("true".to_owned()) {
               LogAction::Forward
             } else {
               LogAction::ForwardToFile { path: logs_path.clone() }
@@ -121,7 +127,7 @@ pub(crate) async fn new_test(test_body: impl TestBody, fast_epoch: bool) {
 
   struct Context {
     pending_coordinator_compositions: Mutex<Vec<TestBodySpecification>>,
-    handles_and_keys: Vec<(Handles, <Ristretto as Ciphersuite>::F)>,
+    handles_and_keys: Vec<(Handles, <Ristretto as WrappedGroup>::F)>,
     test_body: Box<dyn TestBody>,
   }
   static CONTEXT: OnceLock<Mutex<Option<Context>>> = OnceLock::new();
@@ -190,20 +196,13 @@ pub(crate) async fn new_test(test_body: impl TestBody, fast_epoch: bool) {
 
       // Wait for the Serai node to boot, and for the Tendermint chain to get past the first block
       // TODO: Replace this with a Coordinator RPC we can query
-      tokio::time::sleep(Duration::from_secs(60)).await;
+      tokio::time::sleep(Duration::from_mins(1)).await;
 
       // Connect to the Message Queues as the processor
       let mut processors: Vec<Processor> = vec![];
       for (i, (handles, key)) in coordinators.iter().enumerate() {
         processors.push(
-          Processor::new(
-            i.try_into().unwrap(),
-            ExternalNetworkId::Bitcoin,
-            &outer_ops,
-            handles.clone(),
-            *key,
-          )
-          .await,
+          Processor::new(name(i), ExternalNetworkId::Bitcoin, &outer_ops, handles.clone(), *key).await,
         );
       }
 
@@ -219,7 +218,7 @@ pub(crate) async fn new_test(test_body: impl TestBody, fast_epoch: bool) {
 // https://github.com/serai-dex/serai/issues/340
 pub(crate) async fn wait_for_tributary() {
   tokio::time::sleep(Duration::from_secs(15)).await;
-  if std::env::var("GITHUB_CI") == Ok("true".to_string()) {
+  if std::env::var("GITHUB_CI") == Ok("true".to_owned()) {
     tokio::time::sleep(Duration::from_secs(6)).await;
   }
 }

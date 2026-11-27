@@ -5,7 +5,7 @@ use std::{
 
 use rand_core::{RngCore, OsRng};
 
-use ciphersuite_kp256::Secp256k1;
+use ciphersuite::Secp256k1;
 
 use dkg::Participant;
 
@@ -168,7 +168,7 @@ pub async fn sign(
 #[tokio::test]
 async fn sign_test() {
   new_test(
-    |mut processors: Vec<Processor>| async move {
+    async move |mut processors: Vec<Processor>| {
       // pop the last participant since genesis keygen has only 4 participant.
       processors.pop().unwrap();
       assert_eq!(processors.len(), COORDINATORS);
@@ -199,7 +199,7 @@ async fn sign_test() {
         (pair, address)
       };
 
-      #[allow(clippy::inconsistent_digit_grouping)]
+      #[expect(clippy::inconsistent_digit_grouping)]
       let amount = Amount(1_000_000_00);
       let balance = ExternalBalance { coin: ExternalCoin::Bitcoin, amount };
 
@@ -249,7 +249,6 @@ async fn sign_test() {
         balance,
         instruction: OutInstruction {
           address: ExternalAddress::new(b"external".to_vec()).unwrap(),
-          data: None,
         },
       };
       serai
@@ -266,7 +265,7 @@ async fn sign_test() {
       let mut last_serai_block = block_included_in;
       'outer: for _ in 0 .. 20 {
         tokio::time::sleep(Duration::from_secs(6)).await;
-        if std::env::var("GITHUB_CI") == Ok("true".to_string()) {
+        if std::env::var("GITHUB_CI") == Ok("true".to_owned()) {
           tokio::time::sleep(Duration::from_secs(6)).await;
         }
 

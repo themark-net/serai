@@ -3,7 +3,9 @@ use std::{
   time::{SystemTime, Duration},
 };
 
-use dkg::Participant;
+use rand_core::{RngCore, OsRng};
+
+use dkg::{Participant, tests::clone_without};
 
 use messages::{coordinator::*, SubstrateContext};
 
@@ -193,7 +195,7 @@ fn batch_test() {
   for network in EXTERNAL_NETWORKS {
     let (coordinators, test) = new_test(network);
 
-    test.run(|ops| async move {
+    test.run(async move |ops| {
       tokio::time::sleep(Duration::from_secs(1)).await;
 
       let mut coordinators = coordinators

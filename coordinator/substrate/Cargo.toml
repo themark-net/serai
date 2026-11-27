@@ -1,0 +1,34 @@
+[package]
+name = "serai-coordinator-substrate"
+version = "0.1.0"
+description = "Serai Coordinator's Substrate Scanner"
+license = "AGPL-3.0-only"
+repository = "https://github.com/serai-dex/serai/tree/develop/coordinator/substrate"
+authors = ["Luke Parker <lukeparker5132@gmail.com>"]
+keywords = []
+edition = "2024"
+publish = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true
+
+[dependencies]
+hex = { version = "0.4", default-features = false, features = ["alloc"] }
+borsh = { version = "1", default-features = false, features = ["std", "derive", "de_strict_order"] }
+
+dkg = { path = "../../crypto/dkg", default-features = false, features = ["std"] }
+
+serai-client-serai = { path = "../../substrate/client/serai", default-features = false }
+
+futures = { version = "0.3", default-features = false, features = ["std"] }
+
+serai-db = { path = "../../common/db", default-features = false, features = ["std", "schema"] }
+serai-task = { path = "../../common/task" }
+
+serai-cosign = { path = "../cosign" }
+
+messages = { package = "serai-processor-messages", version = "0.1", path = "../../processor/messages" }

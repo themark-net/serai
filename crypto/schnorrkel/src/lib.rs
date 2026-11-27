@@ -1,49 +1,49 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
+#![deny(missing_docs)]
+#![no_std]
 
-use std::io::{self, Read};
+use std_shims::{
+  vec::Vec,
+  io::{self, Read},
+};
 
 use rand_core::{RngCore, CryptoRng};
 
 use zeroize::Zeroizing;
 
-use transcript::{Transcript, MerlinTranscript};
+use transcript::{Transcript as _, MerlinTranscript};
 
-use dalek_ff_group::Ristretto;
 use ciphersuite::{
-  group::{ff::PrimeField, GroupEncoding},
-  Ciphersuite,
+  group::{ff::PrimeField as _, GroupEncoding as _},
+  WrappedGroup,
 };
 use schnorr::SchnorrSignature;
 
+pub use ::frost::*;
 use ::frost::{
-  Participant, ThresholdKeys, ThresholdView, FrostError,
   algorithm::{Hram, Algorithm, Schnorr},
+  curve::Ristretto,
 };
 
-/// The [modular-frost](https://docs.rs/modular-frost) library.
-pub mod frost {
-  pub use ::frost::*;
-}
+use schnorrkel::{
+  PublicKey, Signature,
+  context::{SigningTranscript as _, SigningContext},
+};
 
-use schnorrkel::{PublicKey, Signature, context::SigningTranscript, signing_context};
-
-type RistrettoPoint = <Ristretto as Ciphersuite>::G;
-type Scalar = <Ristretto as Ciphersuite>::F;
-
-#[cfg(test)]
-mod tests;
+type RistrettoPoint = <Ristretto as WrappedGroup>::G;
+type Scalar = <Ristretto as WrappedGroup>::F;
 
 #[derive(Clone)]
 struct SchnorrkelHram;
 impl Hram<Ristretto> for SchnorrkelHram {
-  #[allow(non_snake_case)]
+  #[expect(non_snake_case)]
   fn hram(R: &RistrettoPoint, A: &RistrettoPoint, m: &[u8]) -> Scalar {
     let ctx_len =
       usize::try_from(u32::from_le_bytes(m[0 .. 4].try_into().expect("malformed message")))
         .unwrap();
 
-    let mut t = signing_context(&m[4 .. (4 + ctx_len)]).bytes(&m[(4 + ctx_len) ..]);
+    let mut t = SigningContext::new(&m[4 .. (4 + ctx_len)]).bytes(&m[(4 + ctx_len) ..]);
     t.proto_name(b"Schnorr-sig");
     let convert =
       |point: &RistrettoPoint| PublicKey::from_bytes(&point.to_bytes()).unwrap().into_compressed();
@@ -58,7 +58,7 @@ impl Hram<Ristretto> for SchnorrkelHram {
 pub struct Schnorrkel {
   context: &'static [u8],
   schnorr: Schnorr<Ristretto, MerlinTranscript, SchnorrkelHram>,
-  msg: Option<Vec<u8>>,
+  signing_context: Option<merlin::Transcript>,
 }
 
 impl Schnorrkel {
@@ -66,11 +66,9 @@ impl Schnorrkel {
   ///
   /// If the context is greater than or equal to 4 GB in size, this will panic.
   pub fn new(context: &'static [u8]) -> Schnorrkel {
-    Schnorrkel {
-      context,
-      schnorr: Schnorr::new(MerlinTranscript::new(b"FROST Schnorrkel")),
-      msg: None,
-    }
+    let mut transcript = MerlinTranscript::new(b"frost-schnorrkel");
+    transcript.domain_separate(context);
+    Schnorrkel { context, schnorr: Schnorr::new(transcript), signing_context: None }
   }
 }
 
@@ -83,7 +81,7 @@ impl Algorithm<Ristretto> for Schnorrkel {
     self.schnorr.transcript()
   }
 
-  fn nonces(&self) -> Vec<Vec<<Ristretto as Ciphersuite>::G>> {
+  fn nonces(&self) -> Vec<Vec<<Ristretto as WrappedGroup>::G>> {
     self.schnorr.nonces()
   }
 
@@ -114,7 +112,7 @@ impl Algorithm<Ristretto> for Schnorrkel {
     nonces: Vec<Zeroizing<Scalar>>,
     msg: &[u8],
   ) -> Scalar {
-    self.msg = Some(msg.to_vec());
+    self.signing_context = Some(SigningContext::new(self.context).bytes(msg));
     self.schnorr.sign_share(
       params,
       nonce_sums,
@@ -128,21 +126,21 @@ impl Algorithm<Ristretto> for Schnorrkel {
     )
   }
 
-  #[must_use]
   fn verify(
     &self,
     group_key: RistrettoPoint,
     nonces: &[Vec<RistrettoPoint>],
     sum: Scalar,
   ) -> Option<Self::Signature> {
-    let mut sig = (SchnorrSignature::<Ristretto> { R: nonces[0][0], s: sum }).serialize();
-    sig[63] |= 1 << 7;
-    Some(Signature::from_bytes(&sig).unwrap()).filter(|sig| {
-      PublicKey::from_bytes(&group_key.to_bytes())
-        .unwrap()
-        .verify(&mut signing_context(self.context).bytes(self.msg.as_ref().unwrap()), sig)
-        .is_ok()
-    })
+    let mut signature = (SchnorrSignature::<Ristretto> { R: nonces[0][0], s: sum }).serialize();
+    signature[63] |= 1 << 7;
+    let signature = Signature::from_bytes(&signature).unwrap();
+
+    PublicKey::from_bytes(&group_key.to_bytes())
+      .unwrap()
+      .verify(self.signing_context.as_ref()?.clone(), &signature)
+      .is_ok()
+      .then_some(signature)
   }
 
   fn verify_share(
@@ -153,4 +151,23 @@ impl Algorithm<Ristretto> for Schnorrkel {
   ) -> Result<Vec<(Scalar, RistrettoPoint)>, ()> {
     self.schnorr.verify_share(verification_share, nonces, share)
   }
+}
+
+#[test]
+fn test() {
+  use rand_core::OsRng;
+
+  use frost::tests::{key_gen, algorithm_machines, sign};
+
+  const CONTEXT: &[u8] = b"FROST Schnorrkel Test";
+  const MSG: &[u8] = b"Hello, World!";
+
+  let keys = key_gen(&mut OsRng);
+  let key = keys[&Participant::new(1).unwrap()].group_key();
+  let algorithm = Schnorrkel::new(CONTEXT);
+  let machines = algorithm_machines(&mut OsRng, &algorithm, &keys);
+  let signature = sign(&mut OsRng, &algorithm, keys, machines, MSG);
+
+  let key = PublicKey::from_bytes(key.to_bytes().as_ref()).unwrap();
+  key.verify(SigningContext::new(CONTEXT).bytes(MSG), &signature).unwrap();
 }

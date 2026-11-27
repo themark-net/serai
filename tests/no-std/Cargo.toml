@@ -6,7 +6,7 @@ license = "MIT"
 repository = "https://github.com/kayabaNerve/serai/tree/develop/tests/no-std"
 authors = ["Luke Parker <lukeparker5132@gmail.com>"]
 keywords = ["nostd", "no_std", "alloc"]
-edition = "2021"
+edition = "2024"
 publish = false
 
 [package.metadata.docs.rs]
@@ -17,24 +17,82 @@ rustdoc-args = ["--cfg", "docsrs"]
 workspace = true
 
 [dependencies]
+zalloc = { path = "../../common/zalloc", default-features = false }
+std-shims = { path = "../../common/std-shims", default-features = false }
+serai-db = { path = "../../common/db", default-features = false }
+
 flexible-transcript = { path = "../../crypto/transcript", default-features = false, features = ["recommended", "merlin"] }
 
-dalek-ff-group = { path = "../../crypto/dalek-ff-group", default-features = false, features = ["alloc"] }
-minimal-ed448 = { path = "../../crypto/ed448", default-features = false, features = ["alloc"] }
+multiexp = { path = "../../crypto/multiexp", default-features = false }
 
-ciphersuite = { path = "../../crypto/ciphersuite", default-features = false, features = ["alloc"] }
-ciphersuite-kp256 = { path = "../../crypto/ciphersuite/kp256", default-features = false, features = ["alloc"] }
+dalek-ff-group = { path = "../../crypto/dalek-ff-group", default-features = false }
+minimal-ed448 = { path = "../../crypto/ed448", default-features = false }
 
-multiexp = { path = "../../crypto/multiexp", default-features = false, features = ["batch"] }
+ciphersuite = { path = "../../crypto/ciphersuite", default-features = false }
 
-dleq = { path = "../../crypto/dleq", default-features = false }
 schnorr-signatures = { path = "../../crypto/schnorr", default-features = false }
 
-dkg = { path = "../../crypto/dkg", default-features = false }
-dkg-recovery = { path = "../../crypto/dkg/recovery", default-features = false }
-dkg-dealer = { path = "../../crypto/dkg/dealer", default-features = false }
-dkg-musig = { path = "../../crypto/dkg/musig", default-features = false }
-# modular-frost = { path = "../../crypto/frost", default-features = false }
-# frost-schnorrkel = { path = "../../crypto/schnorrkel", default-features = false }
+prime-field = { path = "../../crypto/prime-field", default-features = false }
+short-weierstrass = { path = "../../crypto/short-weierstrass", default-features = false }
+secq256k1 = { path = "../../crypto/secq256k1", default-features = false }
+embedwards25519 = { path = "../../crypto/embedwards25519", default-features = false }
 
-bitcoin-serai = { path = "../../networks/bitcoin", default-features = false, features = ["hazmat"] }
+dkg = { path = "../../crypto/dkg", default-features = false, optional = true }
+dkg-dealer = { path = "../../crypto/dkg/dealer", default-features = false, optional = true }
+dkg-recovery = { path = "../../crypto/dkg/recovery", default-features = false, optional = true }
+musig = { path = "../../crypto/dkg/musig", default-features = false, optional = true }
+dkg-evrf = { path = "../../crypto/dkg/evrf", default-features = false, optional = true }
+
+modular-frost = { path = "../../crypto/frost", default-features = false, optional = true }
+frost-schnorrkel = { path = "../../crypto/schnorrkel", default-features = false, optional = true }
+
+tendermint-consensus = { path = "../../coordinator/tributary-framework/tendermint", default-features = false }
+
+bitcoin-serai = { path = "../../networks/bitcoin", default-features = false, optional = true }
+
+ethereum-schnorr-contract = { path = "../../networks/ethereum/schnorr", default-features = false }
+
+serai-client-bitcoin = { path = "../../substrate/client/bitcoin", default-features = false, optional = true }
+serai-client-ethereum = { path = "../../substrate/client/ethereum", default-features = false, optional = true }
+
+[features]
+alloc = [
+  "zalloc/alloc",
+  "std-shims/alloc",
+
+  "serai-db/alloc",
+  "serai-db/schema",
+
+  "multiexp/alloc",
+  "multiexp/batch",
+
+  "dalek-ff-group/alloc",
+  "minimal-ed448/alloc",
+
+  "ciphersuite/alloc",
+
+  "schnorr-signatures/alloc",
+
+  "prime-field/alloc",
+  "short-weierstrass/alloc",
+  "secq256k1/alloc",
+  "embedwards25519/alloc",
+
+  "dkg",
+  "dkg-dealer",
+  "dkg-recovery",
+  "musig",
+  "dkg-evrf",
+
+  "modular-frost",
+  "frost-schnorrkel",
+
+  "tendermint-consensus/alloc",
+
+  "bitcoin-serai",
+
+  "ethereum-schnorr-contract/alloc",
+
+  "serai-client-bitcoin",
+  "serai-client-ethereum",
+]

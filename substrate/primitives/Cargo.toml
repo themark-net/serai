@@ -5,37 +5,73 @@ description = "Primitives for the Serai blockchain"
 license = "MIT"
 repository = "https://github.com/serai-dex/serai/tree/develop/substrate/primitives"
 authors = ["Luke Parker <lukeparker5132@gmail.com>"]
-edition = "2021"
-rust-version = "1.74"
+edition = "2024"
+rust-version = "1.91"
 
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[package.metadata.cargo-machete]
+ignored = ["rustversion"]
+
 [lints]
 workspace = true
 
 [dependencies]
-zeroize = { version = "^1.5", features = ["derive"], optional = true }
+rand_core = { version = "0.6", default-features = false }
 
-scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
+zeroize = { version = "1.5", features = ["derive"] }
+borsh = { version = "1.6", default-features = false, features = ["derive", "de_strict_order"] }
 
-borsh = { version = "1", default-features = false, features = ["derive", "de_strict_order"], optional = true }
-serde = { version = "1", default-features = false, features = ["derive", "alloc"], optional = true }
+bitvec = { version = "1", default-features = false, features = ["alloc"] }
+# `parity-scale-codec` requires `rustversion 1.0.6` but only specifies `1.0.0`
+rustversion = { version = "1.0.6", default-features = false }
+scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"], optional = true }
+sp-crypto-hashing = { git = "https://github.com/serai-dex/patch-polkadot-sdk", default-features = false }
+# TODO: `serde` is needed for `sp_core::crypto::Derive::derive`, for _some_ reason
+sp-core = { git = "https://github.com/serai-dex/patch-polkadot-sdk", default-features = false, features = ["serde"] }
 
-sp-application-crypto = { git = "https://github.com/serai-dex/patch-polkadot-sdk", rev = "da19e1f8ca7a9e2cbf39fbfa493918eeeb45e10b", default-features = false }
-sp-core = { git = "https://github.com/serai-dex/patch-polkadot-sdk", rev = "da19e1f8ca7a9e2cbf39fbfa493918eeeb45e10b", default-features = false }
-sp-runtime = { git = "https://github.com/serai-dex/patch-polkadot-sdk", rev = "da19e1f8ca7a9e2cbf39fbfa493918eeeb45e10b", default-features = false }
-sp-io = { git = "https://github.com/serai-dex/patch-polkadot-sdk", rev = "da19e1f8ca7a9e2cbf39fbfa493918eeeb45e10b", default-features = false }
-sp-std = { git = "https://github.com/serai-dex/patch-polkadot-sdk", rev = "da19e1f8ca7a9e2cbf39fbfa493918eeeb45e10b", default-features = false }
+ciphersuite = { path = "../../crypto/ciphersuite", default-features = false, features = ["alloc"] }
+schnorr-signatures = { path = "../../crypto/schnorr", default-features = false, features = ["alloc"] }
+dalek-ff-group = { path = "../../crypto/dalek-ff-group", default-features = false, features = ["alloc"] }
+embedwards25519 = { path = "../../crypto/embedwards25519", default-features = false, features = ["alloc"] }
+secq256k1 = { path = "../../crypto/secq256k1", default-features = false, features = ["alloc"] }
+dkg = { package = "musig", path = "../../crypto/dkg/musig", default-features = false }
 
-frame-support = { git = "https://github.com/serai-dex/patch-polkadot-sdk", rev = "da19e1f8ca7a9e2cbf39fbfa493918eeeb45e10b", default-features = false }
+schnorrkel = { version = "0.11", default-features = false }
+
+bech32 = { version = "0.11", default-features = false }
 
 [dev-dependencies]
-rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
+rand_core = { version = "0.6", default-features = false, features = ["std"] }
+
+bech32 = { version = "0.11", default-features = false, features = ["alloc"] }
 
 [features]
-std = ["zeroize", "scale/std", "borsh?/std", "serde?/std", "sp-core/std", "sp-runtime/std", "sp-std/std", "frame-support/std"]
-borsh = ["dep:borsh"]
-serde = ["dep:serde"]
+std = [
+  "rand_core/std",
+
+  "zeroize/std",
+  "borsh/std",
+
+  "bitvec/std",
+  "scale?/std",
+  "sp-crypto-hashing/std",
+  "sp-core/std",
+
+  "ciphersuite/std",
+  "schnorr-signatures/std",
+  "dalek-ff-group/std",
+  "embedwards25519/std",
+  "secq256k1/std",
+  "dkg/std",
+
+  "schnorrkel/std",
+
+  "bech32/std"
+]
+scale = ["dep:scale", "sp-core/serde"]
+# This feature is not intended for public consumption and is not covered by any guarantees (SemVer, safety)
+test-helpers = ["std"]
 default = ["std"]

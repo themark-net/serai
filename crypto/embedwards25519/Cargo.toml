@@ -1,0 +1,43 @@
+[package]
+name = "embedwards25519"
+version = "0.1.0"
+description = "A curve defined over the Ed25519 scalar field"
+license = "MIT"
+repository = "https://github.com/serai-dex/serai/tree/develop/crypto/embedwards25519"
+authors = ["Luke Parker <lukeparker5132@gmail.com>"]
+keywords = ["curve25519", "ed25519", "ristretto255", "group"]
+edition = "2024"
+rust-version = "1.89"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true
+
+[dependencies]
+hex-literal = { version = "1", default-features = false }
+
+typenum = { version = "1", default-features = false }
+
+prime-field = { path = "../prime-field", default-features = false }
+short-weierstrass = { path = "../short-weierstrass", default-features = false }
+curve25519-dalek = { version = ">= 4.0, < 4.2", default-features = false, features = ["legacy_compatibility", "zeroize", "group"] }
+
+blake2 = { version = "0.11", default-features = false }
+ciphersuite = { path = "../ciphersuite", version = "0.4", default-features = false }
+
+generalized-bulletproofs-ec-gadgets = { git = "https://github.com/monero-oxide/monero-oxide", rev = "46135ae638ecab6b168a53c9b315242d00386754", default-features = false, optional = true }
+
+[dev-dependencies]
+hex = "0.4"
+
+rand_core = { version = "0.6", features = ["std"] }
+
+ff-group-tests = { path = "../ff-group-tests" }
+
+[features]
+alloc = ["prime-field/alloc", "short-weierstrass/alloc", "curve25519-dalek/alloc", "blake2/alloc", "ciphersuite/alloc", "dep:generalized-bulletproofs-ec-gadgets"]
+std = ["alloc", "prime-field/std", "short-weierstrass/std", "ciphersuite/std", "generalized-bulletproofs-ec-gadgets/std"]
+default = ["std"]

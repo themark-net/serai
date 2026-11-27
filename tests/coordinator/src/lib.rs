@@ -1,4 +1,4 @@
-#![allow(clippy::needless_pass_by_ref_mut)] // False positives
+#![expect(clippy::needless_pass_by_ref_mut)] // False positives
 
 use std::{
   sync::{OnceLock, Arc},
@@ -14,11 +14,13 @@ use rand_core::{RngCore, OsRng};
 
 use zeroize::Zeroizing;
 
-use dalek_ff_group::Ristretto;
 use ciphersuite::{
   group::{ff::PrimeField, GroupEncoding},
-  Ciphersuite,
+  WrappedGroup,
 };
+use dalek_ff_group::Ristretto;
+use embedwards25519::Embedwards25519;
+use secq256k1::Secq256k1;
 
 use serai_client::primitives::ExternalNetworkId;
 
@@ -37,24 +39,24 @@ mod tests;
 
 pub fn coordinator_instance(
   name: &str,
-  message_queue_key: <Ristretto as Ciphersuite>::F,
+  message_queue_key: <Ristretto as WrappedGroup>::F,
 ) -> TestBodySpecification {
-  serai_docker_tests::build("coordinator".to_string());
+  serai_docker_tests::build("coordinator".to_owned());
 
   TestBodySpecification::with_image(
     Image::with_repository("serai-dev-coordinator").pull_policy(PullPolicy::Never),
   )
   .replace_env(
     [
-      ("MESSAGE_QUEUE_KEY".to_string(), hex::encode(message_queue_key.to_repr())),
-      ("DB_PATH".to_string(), "./coordinator-db".to_string()),
-      ("SERAI_KEY".to_string(), {
+      ("MESSAGE_QUEUE_KEY".to_owned(), hex::encode(message_queue_key.to_repr())),
+      ("DB_PATH".to_owned(), "./coordinator-db".to_owned()),
+      ("SERAI_KEY".to_owned(), {
         use serai_client::primitives::insecure_pair_from_name;
         hex::encode(&insecure_pair_from_name(name).as_ref().secret.to_bytes()[.. 32])
       }),
       (
-        "RUST_LOG".to_string(),
-        "serai_coordinator=trace,".to_string() + "tributary_chain=trace," + "tendermint=trace",
+        "RUST_LOG".to_owned(),
+        "serai_coordinator=trace,".to_owned() + "tributary_chain=trace," + "tendermint=trace",
       ),
     ]
     .into(),
@@ -63,18 +65,18 @@ pub fn coordinator_instance(
 
 pub fn serai_composition(name: &str, fast_epoch: bool) -> TestBodySpecification {
   (if fast_epoch {
-    serai_docker_tests::build("serai-fast-epoch".to_string());
+    serai_docker_tests::build("serai-fast-epoch".to_owned());
     TestBodySpecification::with_image(
       Image::with_repository("serai-dev-serai-fast-epoch").pull_policy(PullPolicy::Never),
     )
   } else {
-    serai_docker_tests::build("serai".to_string());
+    serai_docker_tests::build("serai".to_owned());
     TestBodySpecification::with_image(
       Image::with_repository("serai-dev-serai").pull_policy(PullPolicy::Never),
     )
   })
   .replace_env(
-    [("SERAI_NAME".to_string(), name.to_lowercase()), ("KEY".to_string(), " ".to_string())].into(),
+    [("SERAI_NAME".to_owned(), name.to_lowercase()), ("KEY".to_owned(), " ".to_owned())].into(),
   )
   .set_publish_all_ports(true)
 }
@@ -112,14 +114,16 @@ pub struct Processor {
   network: ExternalNetworkId,
 
   serai_rpc: String,
-  #[allow(unused)]
+  #[expect(unused)]
   handles: Handles,
 
   msgs: mpsc::UnboundedReceiver<messages::CoordinatorMessage>,
   queue_for_sending: MessageQueue,
   abort_handle: Option<Arc<AbortHandle>>,
 
-  substrate_key: Arc<AsyncMutex<Option<Zeroizing<<Ristretto as Ciphersuite>::F>>>>,
+  evrf_public_keys: ([u8; 32], Vec<u8>),
+
+  substrate_key: Arc<AsyncMutex<Option<Zeroizing<<Ristretto as WrappedGroup>::F>>>>,
 }
 
 impl Drop for Processor {
@@ -132,11 +136,11 @@ impl Drop for Processor {
 
 impl Processor {
   pub async fn new(
-    raw_i: u8,
+    name: &'static str,
     network: ExternalNetworkId,
     ops: &DockerOperations,
     handles: Handles,
-    processor_key: <Ristretto as Ciphersuite>::F,
+    processor_key: <Ristretto as WrappedGroup>::F,
   ) -> Processor {
     let message_queue_rpc = ops.handle(&handles.message_queue).host_port(2287).unwrap();
     let message_queue_rpc = format!("{}:{}", message_queue_rpc.0, message_queue_rpc.1);
@@ -169,7 +173,11 @@ impl Processor {
 
     let (msg_send, msg_recv) = mpsc::unbounded_channel();
 
+    use serai_client::primitives::insecure_arbitrary_key_from_name;
     let substrate_key = Arc::new(AsyncMutex::new(None));
+    let embedwards25519_evrf_key = (Embedwards25519::generator() *
+      insecure_arbitrary_key_from_name::<Embedwards25519>(name))
+    .to_bytes();
     let mut res = Processor {
       network,
 
@@ -183,6 +191,21 @@ impl Processor {
       ),
       msgs: msg_recv,
       abort_handle: None,
+
+      evrf_public_keys: (
+        embedwards25519_evrf_key,
+        match network {
+          NetworkId::Serai => panic!("mock processor for the serai network"),
+          NetworkId::Bitcoin | NetworkId::Ethereum => {
+            let key = (Secq256k1::generator() *
+              insecure_arbitrary_key_from_name::<Secq256k1>(name))
+            .to_bytes();
+            let key: &[u8] = key.as_ref();
+            key.to_vec()
+          }
+          NetworkId::Monero => embedwards25519_evrf_key.to_vec(),
+        },
+      ),
 
       substrate_key: substrate_key.clone(),
     };
@@ -219,7 +242,7 @@ impl Processor {
           }
           let msg = msg_msg;
 
-          let send_message = |msg: ProcessorMessage| async move {
+          let send_message = async move |msg: ProcessorMessage| {
             queue
               .queue(
                 Metadata {
@@ -257,10 +280,12 @@ impl Processor {
               if current_cosign.is_none() || (current_cosign.as_ref().unwrap().block != block) {
                 *current_cosign = Some(new_cosign);
               }
+              let mut preprocess = [0; 64];
+              preprocess[.. name.len()].copy_from_slice(name.as_ref());
               send_message(
                 messages::coordinator::ProcessorMessage::CosignPreprocess {
                   id: id.clone(),
-                  preprocesses: vec![[raw_i; 64]],
+                  preprocesses: vec![preprocess],
                 }
                 .into(),
               )
@@ -271,12 +296,11 @@ impl Processor {
             ) => {
               // TODO: Assert the ID matches CURRENT_COSIGN
               // TODO: Verify the received preprocesses
+              let mut share = [0; 32];
+              share[.. name.len()].copy_from_slice(name.as_bytes());
               send_message(
-                messages::coordinator::ProcessorMessage::SubstrateShare {
-                  id,
-                  shares: vec![[raw_i; 32]],
-                }
-                .into(),
+                messages::coordinator::ProcessorMessage::SubstrateShare { id, shares: vec![share] }
+                  .into(),
               )
               .await;
             }
@@ -297,7 +321,7 @@ impl Processor {
               schnorrkel_key_pair[.. 32].copy_from_slice(&substrate_key.to_repr());
               OsRng.fill_bytes(&mut schnorrkel_key_pair[32 .. 64]);
               schnorrkel_key_pair[64 ..].copy_from_slice(
-                &(<Ristretto as Ciphersuite>::generator() * *substrate_key).to_bytes(),
+                &(<Ristretto as WrappedGroup>::generator() * *substrate_key).to_bytes(),
               );
               let signature = schnorrkel::keys::Keypair::from_bytes(&schnorrkel_key_pair)
                 .unwrap()
@@ -324,6 +348,14 @@ impl Processor {
     res.abort_handle = Some(Arc::new(abort_handle));
 
     res
+  }
+
+  pub fn network(&self) -> NetworkId {
+    self.network
+  }
+
+  pub fn evrf_public_keys(&self) -> ([u8; 32], Vec<u8>) {
+    self.evrf_public_keys.clone()
   }
 
   pub async fn serai(&self) -> Serai {
@@ -356,7 +388,7 @@ impl Processor {
 
   pub async fn set_substrate_key(
     &mut self,
-    substrate_key: Zeroizing<<Ristretto as Ciphersuite>::F>,
+    substrate_key: Zeroizing<<Ristretto as WrappedGroup>::F>,
   ) {
     *self.substrate_key.lock().await = Some(substrate_key);
   }

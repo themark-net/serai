@@ -1,11 +1,21 @@
 use std::{
-  sync::{Mutex, OnceLock},
+  sync::{Mutex, LazyLock},
   collections::{HashSet, HashMap},
   time::SystemTime,
   path::PathBuf,
-  fs, env,
+  fs,
   process::Command,
 };
+
+use dockertest::{LogSource, LogAction, LogPolicy, LogOptions};
+
+pub fn handle(desc: &str) -> String {
+  static UNIQUE_ID: LazyLock<Mutex<u16>> = LazyLock::new(|| Mutex::new(0));
+  let mut unique_id_lock = UNIQUE_ID.lock().unwrap();
+  let unique_id = *unique_id_lock;
+  *unique_id_lock += 1;
+  format!("{desc}-{unique_id}")
+}
 
 pub fn fresh_logs_folder(first: bool, label: &str) -> String {
   let logs_path = [std::env::current_dir().unwrap().to_str().unwrap(), ".test-logs", label]
@@ -19,33 +29,37 @@ pub fn fresh_logs_folder(first: bool, label: &str) -> String {
       "logs folder wasn't empty, despite removing it at the start of the run",
     );
   }
-  logs_path.to_str().unwrap().to_string()
+  logs_path.to_str().unwrap().to_owned()
 }
 
-// TODO: Merge this with what's in serai-orchestrator/have serai-orchestrator perform building
-static BUILT: OnceLock<Mutex<HashMap<String, bool>>> = OnceLock::new();
+pub fn log_options(path: String) -> LogOptions {
+  LogOptions {
+    #[expect(clippy::disallowed_methods)]
+    action: if std::env::var("GITHUB_CI") == Ok("true".to_owned()) {
+      LogAction::Forward
+    } else {
+      LogAction::ForwardToFile { path }
+    },
+    policy: LogPolicy::Always,
+    source: LogSource::Both,
+  }
+}
+
+// TODO: Should `serai-orchestrator` handle building?
 pub fn build(name: String) {
-  let built = BUILT.get_or_init(|| Mutex::new(HashMap::new()));
+  static BUILT: LazyLock<Mutex<HashMap<String, bool>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
   // Only one call to build will acquire this lock
-  let mut built_lock = built.lock().unwrap();
+  let mut built_lock = BUILT.lock().unwrap();
   if built_lock.contains_key(&name) {
     // If it was built, return
     return;
   }
 
   // Else, hold the lock while we build
-  let mut repo_path = env::current_exe().unwrap();
-  repo_path.pop();
-  assert!(repo_path.as_path().ends_with("deps"));
-  repo_path.pop();
-  assert!(repo_path.as_path().ends_with("debug"));
-  repo_path.pop();
-  assert!(repo_path.as_path().ends_with("target"));
-  repo_path.pop();
 
   // Run the orchestrator to ensure the most recent files exist
   if !Command::new("cargo")
-    .current_dir(&repo_path)
     .arg("run")
     .arg("-p")
     .arg("serai-orchestrator")
@@ -62,7 +76,6 @@ pub fn build(name: String) {
   }
 
   if !Command::new("cargo")
-    .current_dir(&repo_path)
     .arg("run")
     .arg("-p")
     .arg("serai-orchestrator")
@@ -78,6 +91,18 @@ pub fn build(name: String) {
     panic!("failed to run the orchestrator");
   }
 
+  let mut repo_path = PathBuf::from(
+    core::str::from_utf8(
+      &Command::new("cargo")
+        .args(["locate-project", "--workspace", "--message-format", "plain"])
+        .output()
+        .expect("couldn't locate workspace with `cargo`")
+        .stdout,
+    )
+    .expect("`cargo` outputted non-UTF-8 bytes to `stdout`"),
+  );
+  repo_path.pop(); // Pop the `Cargo.toml` term
+
   let mut orchestration_path = repo_path.clone();
   orchestration_path.push("orchestration");
   if name != "runtime" {
@@ -90,11 +115,9 @@ pub fn build(name: String) {
   }
   if name.contains("-processor") {
     dockerfile_path =
-      dockerfile_path.join("processor").join(name.split('-').next().unwrap()).join("Dockerfile");
-  } else if name == "serai-fast-epoch" {
-    dockerfile_path = dockerfile_path.join("serai").join("Dockerfile.fast-epoch");
+      dockerfile_path.join("processor").join(name.split('-').next().unwrap()).join("Containerfile");
   } else {
-    dockerfile_path = dockerfile_path.join(&name).join("Dockerfile");
+    dockerfile_path = dockerfile_path.join(&name).join("Containerfile");
   }
 
   // If this Docker image was created after this repo was last edited, return here
@@ -109,15 +132,16 @@ pub fn build(name: String) {
     let last_tag_time_buf = String::from_utf8(res.stdout).expect("docker had non-utf8 output");
     let last_tag_time = last_tag_time_buf.trim();
     if !last_tag_time.is_empty() {
-      let created_time = SystemTime::from(
-        chrono::DateTime::parse_and_remainder(last_tag_time, "%F %T.%f %z")
-          .unwrap_or_else(|_| {
-            panic!("docker formatted last tag time unexpectedly: {last_tag_time}")
-          })
-          .0,
-      );
+      let created_time =
+        jiff::Timestamp::strptime(b"%F %T%.f %Q", last_tag_time.trim_suffix(" UTC").as_bytes())
+          .unwrap_or_else(|e| {
+            panic!("docker formatted last tag time unexpectedly: {last_tag_time} {e:?}")
+          });
+      let created_time = SystemTime::try_from(created_time).unwrap_or_else(|e| {
+        panic!("docker last tag time not representable as a `SystemTime`: {created_time} {e:?}")
+      });
 
-      // For all services, if the Dockerfile was edited after the image was built we should rebuild
+      // For all services, if the Containerfile was edited after the image was last built, rebuild
       let mut last_modified =
         fs::metadata(&dockerfile_path).ok().and_then(|meta| meta.modified().ok());
 
@@ -150,7 +174,7 @@ pub fn build(name: String) {
           meta(repo_path.join("message-queue")),
           meta(repo_path.join("coordinator")),
         ],
-        "runtime" | "serai" | "serai-fast-epoch" => vec![
+        "runtime" | "serai" => vec![
           meta(repo_path.join("common")),
           meta(repo_path.join("crypto")),
           meta(repo_path.join("substrate")),
@@ -161,13 +185,13 @@ pub fn build(name: String) {
       while !metadatas.is_empty() {
         if let (path, Ok(metadata)) = metadatas.pop().unwrap() {
           if metadata.is_file() {
-            if let Ok(modified) = metadata.modified() {
-              if modified >
-                last_modified
-                  .expect("got when source was last modified yet not when the Dockerfile was")
-              {
-                last_modified = Some(modified);
-              }
+            if let Ok(modified) = metadata.modified() &&
+              (modified >
+                last_modified.expect(
+                  "got when source was last modified yet not when the Containerfile was",
+                ))
+            {
+              last_modified = Some(modified);
             }
           } else {
             // Recursively crawl since we care when the folder's contents were edited, not the
@@ -181,17 +205,17 @@ pub fn build(name: String) {
         }
       }
 
-      if let Some(last_modified) = last_modified {
-        if last_modified < created_time {
-          println!("{name} was built after the most recent source code edits, assuming built.");
-          built_lock.insert(name, true);
-          return;
-        }
+      if let Some(last_modified) = last_modified &&
+        (last_modified < created_time)
+      {
+        println!("{name} was built after the most recent source code edits, assuming built.");
+        built_lock.insert(name, true);
+        return;
       }
     }
   }
 
-  println!("Building {}...", &name);
+  println!("Building {name}...");
 
   // Version which always prints
   if !Command::new("docker")
@@ -227,13 +251,13 @@ pub fn build(name: String) {
     println!(
       "{}\r\n",
       String::from_utf8(res.stdout)
-        .unwrap_or_else(|_| "stdout had non-utf8 characters".to_string())
+        .unwrap_or_else(|_| "stdout had non-utf8 characters".to_owned())
     );
     println!("-- stderr --");
     println!(
       "{}\r\n",
       String::from_utf8(res.stderr)
-        .unwrap_or_else(|_| "stderr had non-utf8 characters".to_string())
+        .unwrap_or_else(|_| "stderr had non-utf8 characters".to_owned())
     );
     panic!("failed to build {name}");
   }
@@ -241,6 +265,7 @@ pub fn build(name: String) {
 
   println!("Built!");
 
+  #[expect(clippy::disallowed_methods)]
   if std::env::var("GITHUB_CI").is_ok() {
     println!("In CI, so clearing cache to prevent hitting the storage limits.");
     if !Command::new("docker")

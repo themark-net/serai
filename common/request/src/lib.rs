@@ -1,19 +1,22 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
+#![deny(missing_docs)]
 
-use std::sync::Arc;
+use core::{pin::Pin, future::Future};
+extern crate alloc;
+use alloc::sync::Arc;
 
-use tokio::sync::Mutex;
+use futures_util::FutureExt as _;
+use ::tokio::sync::Mutex;
 
-use tower_service::Service as TowerService;
+use tower_service::Service as _;
+use hyper::{Uri, header::HeaderValue, body::Bytes, client::conn::http1::SendRequest, rt::Executor};
+pub use hyper;
+
+use hyper_util::client::legacy::{Client as HyperClient, connect::HttpConnector};
+
 #[cfg(feature = "tls")]
 use hyper_rustls::{HttpsConnectorBuilder, HttpsConnector};
-use hyper::{Uri, header::HeaderValue, body::Bytes, client::conn::http1::SendRequest};
-use hyper_util::{
-  rt::tokio::TokioExecutor,
-  client::legacy::{Client as HyperClient, connect::HttpConnector},
-};
-pub use hyper;
 
 mod request;
 pub use request::*;
@@ -21,13 +24,21 @@ pub use request::*;
 mod response;
 pub use response::*;
 
+/// An error with an HTTP connection/request/response.
+// TODO: Diversify based on context?
 #[derive(Debug)]
 pub enum Error {
+  /// The URI was invalid.
   InvalidUri,
+  /// The URI lacked a host.
   MissingHost,
+  /// THe request's host was inconsistent with the client's.
   InconsistentHost,
-  ConnectionError(Box<dyn Send + Sync + std::error::Error>),
+  /// An error with the connection occurred.
+  ConnectionError(Box<dyn Send + Sync + core::error::Error>),
+  /// An error propagated from `hyper`.
   Hyper(hyper::Error),
+  /// An error propagated from `hyper-util`.
   HyperUtil(hyper_util::client::legacy::Error),
 }
 
@@ -37,57 +48,81 @@ type Connector = HttpConnector;
 type Connector = HttpsConnector<HttpConnector>;
 
 #[derive(Clone, Debug)]
-enum Connection {
+enum Connection<E> {
   ConnectionPool(HyperClient<Connector, Full<Bytes>>),
   Connection {
+    executor: E,
     connector: Connector,
     host: Uri,
     connection: Arc<Mutex<Option<SendRequest<Full<Bytes>>>>>,
   },
 }
 
+/// An HTTP client.
 #[derive(Clone, Debug)]
-pub struct Client {
-  connection: Connection,
+pub struct Client<E> {
+  connection: Connection<E>,
 }
 
-impl Client {
-  fn connector() -> Connector {
+impl<E: Executor<Pin<Box<dyn Send + Future<Output = ()>>>>> Client<E> {
+  #[cfg_attr(
+    not(all(feature = "tls", not(feature = "webpki-roots"))),
+    expect(clippy::unnecessary_wraps)
+  )]
+  fn connector() -> Result<Connector, Error> {
     let mut res = HttpConnector::new();
     res.set_keepalive(Some(core::time::Duration::from_secs(60)));
     res.set_nodelay(true);
     res.set_reuse_address(true);
+
     #[cfg(feature = "tls")]
     res.enforce_http(false);
     #[cfg(feature = "tls")]
-    let res = HttpsConnectorBuilder::new()
-      .with_native_roots()
-      .expect("couldn't fetch system's SSL roots")
-      .https_or_http()
-      .enable_http1()
-      .wrap_connector(res);
-    res
+    let https = HttpsConnectorBuilder::new().with_native_roots();
+    #[cfg(all(feature = "tls", not(feature = "webpki-roots")))]
+    let https = https.map_err(|e| {
+      Error::ConnectionError(
+        format!("couldn't load system's SSL root certificates and webpki-roots unavilable: {e:?}")
+          .into(),
+      )
+    })?;
+    // Fallback to `webpki-roots` if present
+    #[cfg(all(feature = "tls", feature = "webpki-roots"))]
+    let https = https.unwrap_or(HttpsConnectorBuilder::new().with_webpki_roots());
+    #[cfg(feature = "tls")]
+    let res = https.https_or_http().enable_http1().wrap_connector(res);
+
+    Ok(res)
   }
 
-  pub fn with_connection_pool() -> Client {
-    Client {
+  /// Create a new connection-pooling client over an async executor.
+  pub fn with_executor_and_connection_pool(executor: E) -> Result<Client<E>, Error>
+  where
+    E: 'static + Send + Sync + Clone,
+  {
+    Ok(Client {
       connection: Connection::ConnectionPool(
-        HyperClient::builder(TokioExecutor::new())
+        HyperClient::builder(executor)
           .pool_idle_timeout(core::time::Duration::from_secs(60))
-          .build(Self::connector()),
+          .build(Self::connector()?),
       ),
-    }
+    })
   }
 
-  pub fn without_connection_pool(host: &str) -> Result<Client, Error> {
+  /// Create a new connection over an async executor.
+  pub fn with_executor_and_without_connection_pool(
+    executor: E,
+    host: &str,
+  ) -> Result<Client<E>, Error> {
     Ok(Client {
       connection: Connection::Connection {
-        connector: Self::connector(),
+        executor,
+        connector: Self::connector()?,
         host: {
           let uri: Uri = host.parse().map_err(|_| Error::InvalidUri)?;
           if uri.host().is_none() {
             Err(Error::MissingHost)?;
-          };
+          }
           uri
         },
         connection: Arc::new(Mutex::new(None)),
@@ -95,9 +130,10 @@ impl Client {
     })
   }
 
-  pub async fn request<R: Into<Request>>(&self, request: R) -> Result<Response<'_>, Error> {
+  /// Make an HTTP request.
+  pub async fn request<R: Into<Request>>(&self, request: R) -> Result<Response<'_, E>, Error> {
     let request: Request = request.into();
-    let mut request = request.0;
+    let Request { mut request, response_size_limit } = request;
     if let Some(header_host) = request.headers().get(hyper::header::HOST) {
       match &self.connection {
         Connection::ConnectionPool(_) => {}
@@ -109,9 +145,7 @@ impl Client {
       }
     } else {
       let host = match &self.connection {
-        Connection::ConnectionPool(_) => {
-          request.uri().host().ok_or(Error::MissingHost)?.to_string()
-        }
+        Connection::ConnectionPool(_) => request.uri().host().ok_or(Error::MissingHost)?.to_owned(),
         Connection::Connection { host, .. } => {
           let host_str = host.host().unwrap();
           if let Some(uri_host) = request.uri().host() {
@@ -119,7 +153,7 @@ impl Client {
               Err(Error::InconsistentHost)?;
             }
           }
-          host_str.to_string()
+          host_str.to_owned()
         }
       };
       request
@@ -131,7 +165,7 @@ impl Client {
       Connection::ConnectionPool(client) => {
         client.request(request).await.map_err(Error::HyperUtil)?
       }
-      Connection::Connection { connector, host, connection } => {
+      Connection::Connection { executor, connector, host, connection } => {
         let mut connection_lock = connection.lock().await;
 
         // If there's not a connection...
@@ -143,28 +177,49 @@ impl Client {
           let call_res = call_res.map_err(Error::ConnectionError);
           let (requester, connection) =
             hyper::client::conn::http1::handshake(call_res?).await.map_err(Error::Hyper)?;
-          // This will die when we drop the requester, so we don't need to track an AbortHandle
-          // for it
-          tokio::spawn(connection);
+          // This task will die when we drop the requester
+          executor.execute(Box::pin(connection.map(|_| ())));
           *connection_lock = Some(requester);
         }
 
-        let connection = connection_lock.as_mut().unwrap();
+        let connection = connection_lock.as_mut().expect("lock over the connection was poisoned");
         let mut err = connection.ready().await.err();
         if err.is_none() {
           // Send the request
-          let res = connection.send_request(request).await;
-          if let Ok(res) = res {
-            return Ok(Response(res, self));
+          let response = connection.send_request(request).await;
+          if let Ok(response) = response {
+            return Ok(Response { response, size_limit: response_size_limit, client: self });
           }
-          err = res.err();
+          err = response.err();
         }
         // Since this connection has been put into an error state, drop it
         *connection_lock = None;
-        Err(Error::Hyper(err.unwrap()))?
+        Err(Error::Hyper(err.expect("only here if `err` is some yet no error")))?
       }
     };
 
-    Ok(Response(response, self))
+    Ok(Response { response, size_limit: response_size_limit, client: self })
   }
 }
+
+#[cfg(feature = "tokio")]
+mod tokio {
+  use hyper_util::rt::tokio::TokioExecutor;
+  use super::*;
+
+  /// A [`Client`] which uses [`tokio`](https://docs.rs/tokio) for the executor.
+  pub type TokioClient = Client<TokioExecutor>;
+  impl Client<TokioExecutor> {
+    /// Create a new connection-pooling client over an async executor.
+    pub fn with_connection_pool() -> Result<Self, Error> {
+      Self::with_executor_and_connection_pool(TokioExecutor::new())
+    }
+
+    /// Create a new connection over an async executor.
+    pub fn without_connection_pool(host: &str) -> Result<Self, Error> {
+      Self::with_executor_and_without_connection_pool(TokioExecutor::new(), host)
+    }
+  }
+}
+#[cfg(feature = "tokio")]
+pub use tokio::TokioClient;

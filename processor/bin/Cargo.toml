@@ -1,0 +1,48 @@
+[package]
+name = "serai-processor-bin"
+version = "0.1.0"
+description = "Framework for Serai processor binaries"
+license = "AGPL-3.0-only"
+repository = "https://github.com/serai-dex/serai/tree/develop/processor/bin"
+authors = ["Luke Parker <lukeparker5132@gmail.com>"]
+keywords = []
+edition = "2024"
+publish = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true
+
+[dependencies]
+zeroize = { version = "1", default-features = false, features = ["std"] }
+
+hex = { version = "0.4", default-features = false, features = ["std"] }
+borsh = { version = "1", default-features = false, features = ["std", "derive", "de_strict_order"] }
+
+ciphersuite = { path = "../../crypto/ciphersuite", default-features = false, features = ["std"] }
+dkg = { package = "dkg-evrf", path = "../../crypto/dkg/evrf", default-features = false, features = ["std"] }
+
+serai-primitives = { path = "../../substrate/primitives", default-features = false, features = ["std"] }
+serai-cosign = { package = "serai-cosign-types", path = "../../coordinator/cosign/types" }
+
+tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "sync", "time", "macros"] }
+
+serai-db = { path = "../../common/db", default-features = false, features = ["std", "schema"] }
+serai-env = { path = "../../secret-store/env" }
+
+messages = { package = "serai-processor-messages", path = "../messages" }
+key-gen = { package = "serai-processor-key-gen", path = "../key-gen" }
+
+primitives = { package = "serai-processor-primitives", path = "../primitives" }
+scheduler = { package = "serai-processor-scheduler-primitives", path = "../scheduler/primitives" }
+scanner = { package = "serai-processor-scanner", path = "../scanner" }
+signers = { package = "serai-processor-signers", path = "../signers" }
+
+message-queue = { package = "serai-message-queue-client", path = "../../message-queue/client" }
+
+[features]
+parity-db = ["serai-db/parity-db"]
+rocksdb = ["serai-db/rocksdb"]

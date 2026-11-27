@@ -6,7 +6,7 @@ license = "AGPL-3.0-only"
 repository = "https://github.com/serai-dex/serai/tree/develop/tests/processor"
 authors = ["Luke Parker <lukeparker5132@gmail.com>"]
 keywords = []
-edition = "2021"
+edition = "2024"
 publish = false
 
 [package.metadata.docs.rs]
@@ -23,24 +23,23 @@ zeroize = { version = "1", default-features = false }
 rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
 
 curve25519-dalek = "4"
-dalek-ff-group = { path = "../../crypto/dalek-ff-group", default-features = false }
-ciphersuite = { path = "../../crypto/ciphersuite", default-features = false }
-ciphersuite-kp256 = { path = "../../crypto/ciphersuite/kp256", default-features = false }
-dkg = { path = "../../crypto/dkg", default-features = false }
+ciphersuite = { path = "../../crypto/ciphersuite", default-features = false, features = ["std"] }
+ciphersuite-kp256 = { path = "../../crypto/ciphersuite/kp256", default-features = false, features = ["std"] }
+dalek-ff-group = { path = "../../crypto/dalek-ff-group", default-features = false, features = ["std"] }
+dkg = { package = "dkg-evrf", path = "../../crypto/dkg/evrf", default-features = false, features = ["std"] }
 
 bitcoin-serai = { path = "../../networks/bitcoin" }
 
 k256 = "0.13"
-ethereum-serai = { path = "../../networks/ethereum" }
 
-monero-simple-request-rpc = { git = "https://github.com/monero-oxide/monero-oxide", rev = "32e6b5fe5ba9e1ea3e68da882550005122a11d22" }
-monero-wallet = { git = "https://github.com/monero-oxide/monero-oxide", rev = "32e6b5fe5ba9e1ea3e68da882550005122a11d22" }
+monero-simple-request-rpc = { path = "../../networks/monero/rpc/simple-request" }
+monero-wallet = { path = "../../networks/monero/wallet" }
 
 messages = { package = "serai-processor-messages", path = "../../processor/messages" }
 
 scale = { package = "parity-scale-codec", version = "3" }
 serai-client = { path = "../../substrate/client" }
-serai-db = { path = "../../common/db", default-features = false }
+serai-db = { path = "../../common/db", default-features = false, features = ["std", "schema"] }
 serai-message-queue = { path = "../../message-queue" }
 
 borsh = { version = "1", features = ["de_strict_order"] }
@@ -48,8 +47,8 @@ serde_json = { version = "1", default-features = false }
 
 tokio = { version = "1", features = ["time"] }
 
-processor = { package = "serai-processor", path = "../../processor", features = ["bitcoin", "ethereum", "monero"] }
+# processor = { package = "serai-processor", path = "../../processor", features = ["bitcoin", "ethereum", "monero"] }
 
 dockertest = "0.5"
 serai-docker-tests = { path = "../docker" }
-serai-message-queue-tests = { path = "../message-queue" }
+serai-message-queue-tests = { path = "../../message-queue/tests" }

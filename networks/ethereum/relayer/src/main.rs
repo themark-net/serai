@@ -1,47 +1,35 @@
 pub(crate) use tokio::{
-  io::{AsyncReadExt, AsyncWriteExt},
+  io::{AsyncReadExt as _, AsyncWriteExt as _},
   net::TcpListener,
 };
 
-use serai_db::{Get, DbTxn, Db as DbTrait};
+use serai_db::{Get as _, Transaction as _, Db as _};
+
+use serai_env::Environment;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-  // Override the panic handler with one which will panic if any tokio task panics
-  {
-    let existing = std::panic::take_hook();
-    std::panic::set_hook(Box::new(move |panic| {
-      existing(panic);
-      const MSG: &str = "exiting the process due to a task panicking";
-      println!("{MSG}");
-      log::error!("{MSG}");
-      std::process::exit(1);
-    }));
-  }
-
-  if std::env::var("RUST_LOG").is_err() {
-    std::env::set_var("RUST_LOG", serai_env::var("RUST_LOG").unwrap_or_else(|| "info".to_string()));
-  }
-  env_logger::init();
-
-  log::info!("Starting Ethereum relayer server...");
+  serai_env::init_logger();
+  serai_env::info!("Starting Ethereum relayer server...");
 
   // Open the DB
-  #[allow(unused_variables, unreachable_code)]
+  #[expect(unreachable_code)]
+  #[allow(unused_variables)] // TODO: This appears on `stable` but not `nightly`?
   let db = {
     #[cfg(all(feature = "parity-db", feature = "rocksdb"))]
     panic!("built with parity-db and rocksdb");
+
+    let env = Environment::from_secret_store().await;
+
     #[cfg(all(feature = "parity-db", not(feature = "rocksdb")))]
-    let db =
-      serai_db::new_parity_db(&serai_env::var("DB_PATH").expect("path to DB wasn't specified"));
+    let db = serai_db::new_parity_db(env.var("DB_PATH").expect("path to DB wasn't specified"));
     #[cfg(feature = "rocksdb")]
-    let db =
-      serai_db::new_rocksdb(&serai_env::var("DB_PATH").expect("path to DB wasn't specified"));
+    let db = serai_db::new_rocksdb(env.var("DB_PATH").expect("path to DB wasn't specified"));
     db
   };
 
-  // Start command recipience server
-  // This should not be publicly exposed
+  // Start transaction recipience server
+  // This MUST NOT be publicly exposed
   // TODO: Add auth
   tokio::spawn({
     let db = db.clone();
@@ -57,25 +45,27 @@ async fn main() {
             let mut buf = vec![0; usize::try_from(msg_len).unwrap()];
             let Ok(_) = socket.read_exact(&mut buf).await else { break };
 
-            if buf.len() < 5 {
+            if buf.len() < (4 + 1) {
               break;
             }
             let nonce = u32::from_le_bytes(buf[.. 4].try_into().unwrap());
             let mut txn = db.txn();
-            txn.put(nonce.to_le_bytes(), &buf[4 ..]);
+            // Save the transaction
+            txn.set(nonce.to_le_bytes(), &buf[4 ..]);
             txn.commit();
 
             let Ok(()) = socket.write_all(&[1]).await else { break };
 
-            log::info!("received signed command #{nonce}");
+            serai_env::info!("received transaction to publish (nonce {nonce})");
           }
         });
       }
     }
   });
 
-  // Start command fetch server
+  // Start transaction fetch server
   // 5132 ^ ((b'E' << 8) | b'R') + 1
+  // TODO: JSON-RPC server which returns this as JSON?
   let server = TcpListener::bind("0.0.0.0:20831").await.unwrap();
   loop {
     let (mut socket, _) = server.accept().await.unwrap();
@@ -83,16 +73,18 @@ async fn main() {
     tokio::spawn(async move {
       let db = db.clone();
       loop {
-        // Nonce to get the router comamnd for
+        // Nonce to get the unsigned transaction for
         let mut buf = vec![0; 4];
         let Ok(_) = socket.read_exact(&mut buf).await else { break };
 
-        let command = db.get(&buf[.. 4]).unwrap_or(vec![]);
-        let Ok(()) = socket.write_all(&u32::try_from(command.len()).unwrap().to_le_bytes()).await
+        let transaction = db.get(&buf[.. 4]);
+        let transaction = transaction.as_ref().map(AsRef::as_ref).unwrap_or(&[]);
+        let Ok(()) =
+          socket.write_all(&u32::try_from(transaction.len()).unwrap().to_le_bytes()).await
         else {
           break;
         };
-        let Ok(()) = socket.write_all(&command).await else { break };
+        let Ok(()) = socket.write_all(transaction).await else { break };
       }
     });
   }

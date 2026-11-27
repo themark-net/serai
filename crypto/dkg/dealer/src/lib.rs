@@ -1,28 +1,30 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
+#![deny(missing_docs)]
 #![no_std]
 
-use core::ops::Deref;
+use core::ops::Deref as _;
 use std_shims::{vec::Vec, collections::HashMap};
 
 use zeroize::{Zeroize, Zeroizing};
 use rand_core::{RngCore, CryptoRng};
 
 use ciphersuite::{
-  group::ff::{Field, PrimeField},
-  Ciphersuite,
+  group::ff::{Field as _, PrimeField},
+  GroupIo,
 };
 pub use dkg::*;
 
-/// Create a key via a dealer key generation protocol.
-pub fn key_gen<R: RngCore + CryptoRng, C: Ciphersuite>(
+/// Deal shares of a key.
+pub fn share<R: RngCore + CryptoRng, C: GroupIo>(
   rng: &mut R,
+  key: Zeroizing<C::F>,
   threshold: u16,
   participants: u16,
 ) -> Result<HashMap<Participant, ThresholdKeys<C>>, DkgError> {
   let mut coefficients = Vec::with_capacity(usize::from(participants));
-  // `.max(1)` so we always generate the 0th coefficient which we'll share
-  for _ in 0 .. threshold.max(1) {
+  coefficients.push(key);
+  for _ in 1 .. threshold {
     coefficients.push(Zeroizing::new(C::F::random(&mut *rng)));
   }
 
@@ -44,8 +46,8 @@ pub fn key_gen<R: RngCore + CryptoRng, C: Ciphersuite>(
   }
 
   let group_key = C::generator() * coefficients[0].deref();
-  let mut secret_shares = HashMap::with_capacity(participants as usize);
-  let mut verification_shares = HashMap::with_capacity(participants as usize);
+  let mut secret_shares = HashMap::with_capacity(usize::from(participants));
+  let mut verification_shares = HashMap::with_capacity(usize::from(participants));
   for i in 1 ..= participants {
     let i = Participant::new(i).expect("non-zero u16 wasn't a valid Participant index");
     let secret_share = polynomial(&coefficients, i);
@@ -53,7 +55,7 @@ pub fn key_gen<R: RngCore + CryptoRng, C: Ciphersuite>(
     verification_shares.insert(i, C::generator() * *secret_share);
   }
 
-  let mut res = HashMap::with_capacity(participants as usize);
+  let mut res = HashMap::with_capacity(usize::from(participants));
   for (i, secret_share) in secret_shares {
     let keys = ThresholdKeys::new(
       ThresholdParams::new(threshold, participants, i)?,
@@ -65,4 +67,14 @@ pub fn key_gen<R: RngCore + CryptoRng, C: Ciphersuite>(
     res.insert(i, keys);
   }
   Ok(res)
+}
+
+/// Create a key via a dealer key generation protocol.
+pub fn key_gen<R: RngCore + CryptoRng, C: GroupIo>(
+  rng: &mut R,
+  threshold: u16,
+  participants: u16,
+) -> Result<HashMap<Participant, ThresholdKeys<C>>, DkgError> {
+  let key = Zeroizing::new(C::F::random(&mut *rng));
+  share::<R, C>(rng, key, threshold, participants)
 }

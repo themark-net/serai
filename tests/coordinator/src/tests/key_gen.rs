@@ -1,42 +1,54 @@
-use std::{
-  time::{Duration, SystemTime},
-  collections::HashMap,
-};
+use std::time::{Duration, SystemTime};
 
 use zeroize::Zeroizing;
 use rand_core::OsRng;
 
-use dalek_ff_group::Ristretto;
 use ciphersuite::{
   group::{ff::Field, GroupEncoding},
-  Ciphersuite,
+  WrappedGroup,
 };
-use ciphersuite_kp256::Secp256k1;
-use dkg::ThresholdParams;
+use ciphersuite_kp256::Secq256k1;
+use dalek_ff_group::Ristretto;
+use dkg::Participant;
 
-use serai_client::validator_sets::primitives::{ExternalValidatorSet, KeyPair, Session};
-use messages::{key_gen::KeyGenId, CoordinatorMessage};
+use serai_client::{
+  validator_sets::primitives::{ExternalValidatorSet, KeyPair, Session},
+  Public,
+};
+use messages::CoordinatorMessage;
 
 use crate::tests::*;
 
-pub async fn key_gen<C: Ciphersuite>(
+pub async fn key_gen<C: WrappedGroup>(
   processors: &mut [Processor],
   session: Session,
-) -> (Vec<u8>, Zeroizing<<Ristretto as Ciphersuite>::F>, Zeroizing<C::F>) {
+) -> (Vec<u8>, Zeroizing<<Ristretto as WrappedGroup>::F>, Zeroizing<C::F>) {
   let coordinators = processors.len();
   let mut participant_is = vec![];
 
   let set = ExternalValidatorSet { session, network: ExternalNetworkId::Bitcoin };
-  let id = KeyGenId { session: set.session, attempt: 0 };
 
-  for (i, processor) in processors.iter_mut().enumerate() {
+  // This is distinct from the result of evrf_public_keys for each processor, as there'll have some
+  // ordering algorithm on-chain which won't match our ordering
+  let mut evrf_public_keys_as_on_chain = None;
+  for processor in processors.iter_mut() {
+    // Receive GenerateKey
     let msg = processor.recv_message().await;
     match &msg {
       CoordinatorMessage::KeyGen(messages::key_gen::CoordinatorMessage::GenerateKey {
-        params,
+        evrf_public_keys,
         ..
       }) => {
-        participant_is.push(params.i());
+        if evrf_public_keys_as_on_chain.is_none() {
+          evrf_public_keys_as_on_chain = Some(evrf_public_keys.clone());
+        }
+        assert_eq!(evrf_public_keys_as_on_chain.as_ref().unwrap(), evrf_public_keys);
+        let i = evrf_public_keys
+          .iter()
+          .position(|public_keys| *public_keys == processor.evrf_public_keys())
+          .unwrap();
+        let i = Participant::new(1 + u16::try_from(i).unwrap()).unwrap();
+        participant_is.push(i);
       }
       _ => panic!("unexpected message: {msg:?}"),
     }
@@ -44,65 +56,45 @@ pub async fn key_gen<C: Ciphersuite>(
     assert_eq!(
       msg,
       CoordinatorMessage::KeyGen(messages::key_gen::CoordinatorMessage::GenerateKey {
-        id,
-        params: ThresholdParams::new(
-          u16::try_from(((coordinators * 2) / 3) + 1).unwrap(),
-          u16::try_from(coordinators).unwrap(),
-          participant_is[i],
-        )
-        .unwrap(),
-        shares: 1,
+        session,
+        threshold: u16::try_from(((coordinators * 2) / 3) + 1).unwrap(),
+        evrf_public_keys: evrf_public_keys_as_on_chain.clone().unwrap(),
       })
     );
-
-    processor
-      .send_message(messages::key_gen::ProcessorMessage::Commitments {
-        id,
-        commitments: vec![vec![u8::try_from(u16::from(participant_is[i])).unwrap()]],
-      })
-      .await;
   }
 
-  wait_for_tributary().await;
-  for (i, processor) in processors.iter_mut().enumerate() {
-    let mut commitments = (0 .. u8::try_from(coordinators).unwrap())
-      .map(|l| {
-        (
-          participant_is[usize::from(l)],
-          vec![u8::try_from(u16::from(participant_is[usize::from(l)])).unwrap()],
-        )
+  for i in 0 .. coordinators {
+    // Send Participation
+    processors[i]
+      .send_message(messages::key_gen::ProcessorMessage::Participation {
+        session,
+        participation: vec![u8::try_from(u16::from(participant_is[i])).unwrap()],
       })
-      .collect::<HashMap<_, _>>();
-    commitments.remove(&participant_is[i]);
-    assert_eq!(
-      processor.recv_message().await,
-      CoordinatorMessage::KeyGen(messages::key_gen::CoordinatorMessage::Commitments {
-        id,
-        commitments,
-      })
-    );
-
-    // Recipient it's for -> (Sender i, Recipient i)
-    let mut shares = (0 .. u8::try_from(coordinators).unwrap())
-      .map(|l| {
-        (
-          participant_is[usize::from(l)],
-          vec![
-            u8::try_from(u16::from(participant_is[i])).unwrap(),
-            u8::try_from(u16::from(participant_is[usize::from(l)])).unwrap(),
-          ],
-        )
-      })
-      .collect::<HashMap<_, _>>();
-
-    shares.remove(&participant_is[i]);
-    processor
-      .send_message(messages::key_gen::ProcessorMessage::Shares { id, shares: vec![shares] })
       .await;
+
+    // Sleep so this participation gets included
+    for _ in 0 .. 2 {
+      wait_for_tributary().await;
+    }
+
+    // Have every other processor recv this message too
+    for processor in processors.iter_mut() {
+      assert_eq!(
+        processor.recv_message().await,
+        messages::CoordinatorMessage::KeyGen(
+          messages::key_gen::CoordinatorMessage::Participation {
+            session,
+            participant: participant_is[i],
+            participation: vec![u8::try_from(u16::from(participant_is[i])).unwrap()],
+          }
+        )
+      );
+    }
   }
 
-  let substrate_priv_key = Zeroizing::new(<Ristretto as Ciphersuite>::F::random(&mut OsRng));
-  let substrate_key = (<Ristretto as Ciphersuite>::generator() * *substrate_priv_key).to_bytes();
+  // Now that we've received all participations, publish the key pair
+  let substrate_priv_key = Zeroizing::new(<Ristretto as WrappedGroup>::F::random(&mut OsRng));
+  let substrate_key = (<Ristretto as WrappedGroup>::generator() * *substrate_priv_key).to_bytes();
 
   let network_priv_key = Zeroizing::new(C::F::random(&mut OsRng));
   let network_key = (C::generator() * *network_priv_key).to_bytes().as_ref().to_vec();
@@ -110,43 +102,27 @@ pub async fn key_gen<C: Ciphersuite>(
   let serai = processors[0].serai().await;
   let mut last_serai_block = serai.latest_finalized_block().await.unwrap().number();
 
-  wait_for_tributary().await;
-  for (i, processor) in processors.iter_mut().enumerate() {
-    let i = participant_is[i];
-    assert_eq!(
-      processor.recv_message().await,
-      CoordinatorMessage::KeyGen(messages::key_gen::CoordinatorMessage::Shares {
-        id,
-        shares: {
-          let mut shares = (0 .. u8::try_from(coordinators).unwrap())
-            .map(|l| {
-              (
-                participant_is[usize::from(l)],
-                vec![
-                  u8::try_from(u16::from(participant_is[usize::from(l)])).unwrap(),
-                  u8::try_from(u16::from(i)).unwrap(),
-                ],
-              )
-            })
-            .collect::<HashMap<_, _>>();
-          shares.remove(&i);
-          vec![shares]
-        },
-      })
-    );
+  for processor in processors.iter_mut() {
     processor
       .send_message(messages::key_gen::ProcessorMessage::GeneratedKeyPair {
-        id,
+        session,
         substrate_key,
         network_key: network_key.clone(),
       })
       .await;
   }
 
-  // Sleeps for longer since we need to wait for a Substrate block as well
+  // Wait for the Nonces TXs to go around
+  wait_for_tributary().await;
+  // Wait for the Share TXs to go around
+  wait_for_tributary().await;
+
+  // And now we're waiting ro the TX to be published onto Serai
+
+  // We need to wait for a finalized Substrate block as well, so this waites for up to 20 blocks
   'outer: for _ in 0 .. 20 {
     tokio::time::sleep(Duration::from_secs(6)).await;
-    if std::env::var("GITHUB_CI") == Ok("true".to_string()) {
+    if std::env::var("GITHUB_CI") == Ok("true".to_owned()) {
       tokio::time::sleep(Duration::from_secs(6)).await;
     }
 
@@ -221,7 +197,7 @@ pub async fn key_gen<C: Ciphersuite>(
 #[tokio::test]
 async fn key_gen_test() {
   new_test(
-    |mut processors: Vec<Processor>| async move {
+    async move |mut processors: Vec<Processor>| {
       // pop the last participant since genesis keygen has only 4 participants
       processors.pop().unwrap();
       assert_eq!(processors.len(), COORDINATORS);

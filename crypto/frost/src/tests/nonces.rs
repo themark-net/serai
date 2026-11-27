@@ -1,13 +1,16 @@
-use std::io::{self, Read};
+use std_shims::{
+  prelude::*,
+  io::{self, Read},
+};
 
 use zeroize::Zeroizing;
 
-use rand_core::{RngCore, CryptoRng, SeedableRng};
+use rand_core::{RngCore, CryptoRng, SeedableRng as _};
 use rand_chacha::ChaCha20Rng;
 
-use transcript::{Transcript, RecommendedTranscript};
+use transcript::{Transcript as _, RecommendedTranscript};
 
-use ciphersuite::group::{ff::Field, Group, GroupEncoding};
+use ciphersuite::group::{ff::Field as _, Group as _, GroupEncoding as _};
 
 use crate::{
   Curve, Participant, ThresholdView, ThresholdKeys, FrostError,
@@ -52,7 +55,7 @@ fn verify_nonces<C: Curve>(nonces: &[Vec<C::G>]) {
   assert_eq!(nonces[1][0] * C::F::from(3), nonces[1][1]);
   assert_eq!(nonces[1][0] * C::F::from(4), nonces[1][2]);
 
-  assert!(nonces[0][0] != nonces[1][0]);
+  assert_ne!(nonces[0][0], nonces[1][0]);
 }
 
 impl<C: Curve> Algorithm<C> for MultiNonce<C> {
@@ -95,7 +98,7 @@ impl<C: Curve> Algorithm<C> for MultiNonce<C> {
 
     // Verify we actually have two nonces and that they're distinct
     assert_eq!(nonces.len(), 2);
-    assert!(nonces[0] != nonces[1]);
+    assert_ne!(nonces[0], nonces[1]);
 
     // Save the nonce sums for later so we can check they're consistent with the call to verify
     assert!(self.nonces.is_none());
@@ -121,7 +124,6 @@ impl<C: Curve> Algorithm<C> for MultiNonce<C> {
     res
   }
 
-  #[must_use]
   fn verify(&self, _: C::G, nonces: &[Vec<C::G>], sum: C::F) -> Option<Self::Signature> {
     verify_nonces::<C>(nonces);
     assert_eq!(&self.nonces.clone().unwrap(), nonces);

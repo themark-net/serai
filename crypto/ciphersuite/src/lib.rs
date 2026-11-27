@@ -1,102 +1,157 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("lib.md")]
-#![cfg_attr(not(feature = "std"), no_std)]
+#![deny(missing_docs)]
+#![no_std]
 
-use core::fmt::Debug;
-#[cfg(any(feature = "alloc", feature = "std"))]
-#[allow(unused_imports)]
-use std_shims::prelude::*;
-#[cfg(any(feature = "alloc", feature = "std"))]
-use std_shims::io::{self, Read};
+use std_shims::io;
 
-use rand_core::{RngCore, CryptoRng};
-
+use subtle::{CtOption, ConstantTimeEq, ConditionallySelectable};
 use zeroize::Zeroize;
-use subtle::ConstantTimeEq;
 
-use digest::{core_api::BlockSizeUser, Digest, HashMarker};
-use transcript::SecureDigest;
+pub use digest;
+use digest::{array::ArraySize, OutputSizeUser, Digest, HashMarker};
 
 pub use group;
 use group::{
-  ff::{Field, PrimeField, PrimeFieldBits},
+  ff::{PrimeField, PrimeFieldBits},
   Group, GroupOps,
   prime::PrimeGroup,
 };
-#[cfg(any(feature = "alloc", feature = "std"))]
 use group::GroupEncoding;
 
-/// Unified trait defining a ciphersuite around an elliptic curve.
-pub trait Ciphersuite:
-  'static + Send + Sync + Clone + Copy + PartialEq + Eq + Debug + Zeroize
-{
-  /// Scalar field element type.
-  // This is available via G::Scalar yet `C::G::Scalar` is ambiguous, forcing horrific accesses
-  type F: PrimeField + PrimeFieldBits + Zeroize;
-  /// Group element type.
-  type G: Group<Scalar = Self::F> + GroupOps + PrimeGroup + Zeroize + ConstantTimeEq;
-  /// Hash algorithm used with this curve.
-  // Requires BlockSizeUser so it can be used within Hkdf which requires that.
-  type H: Send + Clone + BlockSizeUser + Digest + HashMarker + SecureDigest;
-
-  /// ID for this curve.
-  const ID: &'static [u8];
-
-  /// Generator for the group.
-  // While group does provide this in its API, privacy coins may want to use a custom basepoint
-  fn generator() -> Self::G;
-
-  /// Hash the provided domain-separation tag and message to a scalar. Ciphersuites MAY naively
-  /// prefix the tag to the message, enabling transpotion between the two. Accordingly, this
-  /// function should NOT be used in any scheme where one tag is a valid substring of another
-  /// UNLESS the specific Ciphersuite is verified to handle the DST securely.
-  ///
-  /// Verifying specific ciphersuites have secure tag handling is not recommended, due to it
-  /// breaking the intended modularity of ciphersuites. Instead, component-specific tags with
-  /// further purpose tags are recommended ("Schnorr-nonce", "Schnorr-chal").
-  #[allow(non_snake_case)]
-  fn hash_to_F(dst: &[u8], msg: &[u8]) -> Self::F;
-
-  /// Generate a random non-zero scalar.
-  #[allow(non_snake_case)]
-  fn random_nonzero_F<R: RngCore + CryptoRng>(rng: &mut R) -> Self::F {
-    let mut res;
-    while {
-      res = Self::F::random(&mut *rng);
-      res.ct_eq(&Self::F::ZERO).into()
-    } {}
-    res
-  }
-
-  /// Read a canonical scalar from something implementing std::io::Read.
-  #[cfg(any(feature = "alloc", feature = "std"))]
-  #[allow(non_snake_case)]
-  fn read_F<R: Read>(reader: &mut R) -> io::Result<Self::F> {
-    let mut encoding = <Self::F as PrimeField>::Repr::default();
-    reader.read_exact(encoding.as_mut())?;
-
-    // ff mandates this is canonical
-    let res = Option::<Self::F>::from(Self::F::from_repr(encoding))
-      .ok_or_else(|| io::Error::other("non-canonical scalar"));
-    encoding.as_mut().zeroize();
-    res
-  }
-
-  /// Read a canonical point from something implementing std::io::Read.
-  ///
-  /// The provided implementation is safe so long as `GroupEncoding::to_bytes` always returns a
-  /// canonical serialization.
-  #[cfg(any(feature = "alloc", feature = "std"))]
-  #[allow(non_snake_case)]
-  fn read_G<R: Read>(reader: &mut R) -> io::Result<Self::G> {
-    let mut encoding = <Self::G as GroupEncoding>::Repr::default();
-    reader.read_exact(encoding.as_mut())?;
-
-    let point = Option::<Self::G>::from(Self::G::from_bytes(&encoding))
-      .ok_or_else(|| io::Error::other("invalid point"))?;
-    if point.to_bytes().as_ref() != encoding.as_ref() {
-      Err(io::Error::other("non-canonical point"))?;
-    }
-    Ok(point)
+/// A wrapper trait for [`group::ff::FromUniformBytes`] which relaxes from `[u8; N]` to `T`.
+///
+/// This is present solely as a workaround for the lack of `generic_const_exprs`.
+pub trait FromUniformBytes<T> {
+  /// Convert a sequence of uniformly-distributed bytes into a uniformly-distributed field element.
+  fn from_uniform_bytes(bytes: &T) -> Self;
+}
+impl<const N: usize, F: group::ff::FromUniformBytes<N>> FromUniformBytes<[u8; N]> for F {
+  fn from_uniform_bytes(bytes: &[u8; N]) -> Self {
+    F::from_uniform_bytes(bytes)
   }
 }
+
+/// A marker trait for fields which fleshes them out a bit more.
+pub trait F: PrimeField + PrimeFieldBits + Zeroize {}
+impl<Fi: PrimeField + PrimeFieldBits + Zeroize> F for Fi {}
+/// A marker trait for groups which fleshes them out a bit more.
+pub trait G:
+  Group + GroupOps + GroupEncoding + PrimeGroup + ConstantTimeEq + ConditionallySelectable + Zeroize
+{
+}
+impl<
+  Gr: Group
+    + GroupOps
+    + GroupEncoding
+    + PrimeGroup
+    + ConstantTimeEq
+    + ConditionallySelectable
+    + Zeroize,
+> G for Gr
+{
+}
+
+/// A `Group` type which has been wrapped into the current type.
+///
+/// This avoids having to re-implement all of the `Group` traits on the wrapper.
+pub trait WrappedGroup: Clone {
+  /// Scalar field element type.
+  // This is available via `G::Scalar` yet `WG::G::Scalar` is ambiguous, forcing horrific accesses
+  type F: F;
+  /// Group element type.
+  type G: Group<Scalar = Self::F> + G;
+  /// Generator for the group.
+  fn generator() -> Self::G;
+}
+impl<Gr: G<Scalar: F>> WrappedGroup for Gr {
+  type F = <Gr as Group>::Scalar;
+  type G = Gr;
+  fn generator() -> Self::G {
+    <Self::G as Group>::generator()
+  }
+}
+
+/// An ID for an elliptic curve/ciphersuite.
+pub trait Id {
+  /// The ID.
+  const ID: &[u8];
+}
+
+/// A group with a preferred hash function.
+pub trait WithPreferredHash:
+  WrappedGroup<
+  F: FromUniformBytes<<<Self::H as OutputSizeUser>::OutputSize as ArraySize>::ArrayType<u8>>,
+>
+{
+  /// The preferred cryptographically-secure hash function for usage with this elliptic curve.
+  ///
+  /// The output of this hash function MUST be of the necessary length to derive uniform scalar
+  /// field elements.
+  type H: Clone + Digest + HashMarker;
+
+  /// Hash the specified `data` into a uniformly-distributed scalar field element.
+  ///
+  /// This hashes the data as-is with no modifications nor prefixing nor contextualization.
+  #[expect(non_snake_case)]
+  fn hash_to_F(data: impl AsRef<[u8]>) -> Self::F {
+    Self::F::from_uniform_bytes(&Self::H::digest(data).into())
+  }
+}
+
+/// A group which always encodes points canonically and supports decoding points while checking
+/// they were canonically encoded.
+///
+/// This exists as [`group::ff::PrimeField::from_repr`] does assert the input was
+/// canonically-encoded but [`group::GroupEncoding::from_bytes`] does not, with no alternative
+/// function to accomplish this.
+pub trait GroupCanonicalEncoding: WrappedGroup {
+  /// Decode a point from its canonical encoding.
+  ///
+  /// Returns `None` if the point was invalid or not the encoding wasn't canonical.
+  ///
+  /// If `<Self::G as GroupEncoding>::from_bytes` already only accepts canonical encodings, this
+  /// SHOULD be overriden with `<Self::G as GroupEncoding>::from_bytes(bytes)`. The provided
+  /// implementation will re-encode the point and compare it to the original encoding to check
+  /// they're equivalent.
+  fn from_canonical_bytes(bytes: &<Self::G as GroupEncoding>::Repr) -> CtOption<Self::G> {
+    let res = Self::G::from_bytes(bytes).unwrap_or(Self::generator());
+    // Safe due to the bound points are always encoded canonically
+    let canonical = res.to_bytes().as_ref().ct_eq(bytes.as_ref());
+    CtOption::new(res, canonical)
+  }
+}
+
+/// [`std::io`] extensions for [`GroupCanonicalEncoding`].
+#[expect(non_snake_case)]
+pub trait GroupIo: GroupCanonicalEncoding {
+  /// Read a canonically-encoded scalar field element from something implementing [`std::io::Read`].
+  fn read_F(mut reader: impl io::Read) -> io::Result<Self::F> {
+    let mut bytes = <Self::F as PrimeField>::Repr::default();
+    reader.read_exact(bytes.as_mut())?;
+
+    // `ff` mandates this is canonical
+    let res = Option::<Self::F>::from(Self::F::from_repr(bytes))
+      .ok_or_else(|| io::Error::other("non-canonical scalar"));
+    bytes.as_mut().zeroize();
+
+    res
+  }
+
+  /// Read a canonically-encoded point from something implementing [`std::io::Read`].
+  fn read_G(mut reader: impl io::Read) -> io::Result<Self::G> {
+    let mut bytes = <Self::G as GroupEncoding>::Repr::default();
+    reader.read_exact(bytes.as_mut())?;
+
+    let res = Option::<Self::G>::from(Self::from_canonical_bytes(&bytes))
+      .ok_or_else(|| io::Error::other("invalid point"))?;
+    bytes.as_mut().zeroize();
+
+    Ok(res)
+  }
+}
+impl<Gr: GroupCanonicalEncoding> GroupIo for Gr {}
+
+/// Unified trait defining a ciphersuite around an elliptic curve.
+pub trait Ciphersuite: Id + WithPreferredHash + GroupCanonicalEncoding {}
+impl<C: Id + WithPreferredHash + GroupCanonicalEncoding> Ciphersuite for C {}

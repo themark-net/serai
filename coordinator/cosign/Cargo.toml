@@ -1,0 +1,48 @@
+[package]
+name = "serai-cosign"
+version = "0.1.0"
+description = "Evaluator of cosigns for the Serai network"
+license = "AGPL-3.0-only"
+repository = "https://github.com/serai-dex/serai/tree/develop/coordinator/cosign"
+authors = ["Luke Parker <lukeparker5132@gmail.com>"]
+keywords = []
+edition = "2024"
+publish = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true
+
+[dependencies]
+blake2 = { version = "0.11", default-features = false, features = ["alloc"] }
+
+borsh = { version = "1", default-features = false, features = ["std", "derive", "de_strict_order"] }
+serai-client-serai = { path = "../../substrate/client/serai", default-features = false }
+
+serai-env = { path = "../../secret-store/env", version = "0.1" }
+
+tokio = { version = "1", default-features = false }
+
+serai-db = { path = "../../common/db", default-features = false, features = ["std", "schema"] }
+serai-task = { path = "../../common/task" }
+
+serai-cosign-types = { path = "./types" }
+
+[dev-dependencies]
+hex = { version = "0.4", default-features = false }
+
+rand_core = { version = "0.6", default-features = false }
+rand = { version = "0.8", default-features = false }
+
+schnorrkel = { version = "0.11", default-features = false, features = ["std"] }
+
+serai-primitives = { path = "../../substrate/primitives", features = ["test-helpers"] }
+serai-abi = { path = "../../substrate/abi", default-features = false, features = ["std"] }
+
+serai-cosign-types = { path = "./types", features = ["test-helpers"] }
+serai-task = { path = "../../common/task", features = ["test-helpers"] }
+
+serai-shim-rpc = { path = "../../tests/shim-rpc" }

@@ -1,18 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
-  # std patches
-  "patches/matches",
-
-  # Rewrites/redirects
-  "patches/option-ext",
-  "patches/directories-next",
-
   "common/std-shims",
   "common/zalloc",
-  "common/patchable-async-sleep",
   "common/db",
-  "common/env",
+  "common/task",
   "common/request",
 
   "crypto/transcript",
@@ -24,189 +16,352 @@ members = [
   "crypto/ciphersuite/kp256",
 
   "crypto/multiexp",
-
   "crypto/schnorr",
-  "crypto/dleq",
+
+  "crypto/prime-field",
+  "crypto/short-weierstrass",
+  "crypto/secq256k1",
+  "crypto/embedwards25519",
+
   "crypto/dkg",
   "crypto/dkg/recovery",
   "crypto/dkg/dealer",
-  "crypto/dkg/promote",
   "crypto/dkg/musig",
-  "crypto/dkg/pedpop",
+  "crypto/dkg/evrf",
   "crypto/frost",
   "crypto/schnorrkel",
 
   "networks/bitcoin",
 
+  "networks/ethereum/build-contracts",
+  "networks/ethereum/schnorr",
   "networks/ethereum/alloy-simple-request-transport",
-  "networks/ethereum",
   "networks/ethereum/relayer",
 
+  "secret-store",
+  "secret-store/env",
+
   "message-queue",
+  "message-queue/client",
+  "message-queue/server",
+  "message-queue/tests",
 
   "processor/messages",
-  "processor",
 
-  "coordinator/tributary/tendermint",
+  "processor/key-gen",
+  "processor/view-keys",
+  "processor/frost-attempt-manager",
+
+  "processor/primitives",
+  "processor/scanner",
+  "processor/scheduler/primitives",
+  "processor/scheduler/utxo/primitives",
+  "processor/scheduler/utxo/standard",
+  "processor/scheduler/utxo/transaction-chaining",
+  "processor/scheduler/smart-contract",
+  "processor/signers",
+
+  "processor/bin",
+  "processor/bitcoin",
+  "processor/ethereum/primitives",
+  "processor/ethereum/test-primitives",
+  "processor/ethereum/deployer",
+  "processor/ethereum/erc20",
+  "processor/ethereum/router",
+  "processor/ethereum",
+  "processor/monero",
+
+  "coordinator/tributary-framework/tendermint",
+  "coordinator/tributary-framework",
+  "coordinator/cosign/types",
+  "coordinator/cosign",
+  "coordinator/substrate",
   "coordinator/tributary",
+  "coordinator/p2p",
+  "coordinator/p2p/libp2p",
   "coordinator",
 
   "substrate/primitives",
-
-  "substrate/coins/primitives",
-  "substrate/coins/pallet",
-
-  "substrate/dex/pallet",
-
-  "substrate/validator-sets/primitives",
-  "substrate/validator-sets/pallet",
-
-  "substrate/genesis-liquidity/primitives",
-  "substrate/genesis-liquidity/pallet",
-
-  "substrate/emissions/primitives",
-  "substrate/emissions/pallet",
-
-  "substrate/economic-security/pallet",
-
-  "substrate/in-instructions/primitives",
-  "substrate/in-instructions/pallet",
-
-  "substrate/signals/primitives",
-  "substrate/signals/pallet",
-
   "substrate/abi",
+
+  "substrate/median",
+
+  "substrate/core",
+  "substrate/coins",
+  "substrate/validator-sets",
+  "substrate/signals",
+  "substrate/dex",
+  "substrate/genesis-liquidity",
+  "substrate/economic-security",
+  "substrate/emissions",
+  "substrate/in-instructions",
 
   "substrate/runtime",
   "substrate/node",
 
+  "substrate/client/serai",
+  "substrate/client/bitcoin",
+  "substrate/client/ethereum",
+  "substrate/client/monero",
   "substrate/client",
 
   "orchestration",
 
-  "mini",
-
   "tests/no-std",
 
+  "tests/shim-rpc",
   "tests/docker",
-  "tests/message-queue",
-  "tests/processor",
-  "tests/coordinator",
-  "tests/full-stack",
+  # TODO "tests/processor",
+  # TODO "tests/coordinator",
+  "tests/substrate",
+  # TODO "tests/full-stack",
   "tests/reproducible-runtime",
 ]
 
+[profile.dev]
+panic = "abort"
+overflow-checks = true
+[profile.release]
+panic = "abort"
+overflow-checks = true
+# These do not respect the `panic` configuration value, so we don't provide them
+[profile.test]
+# panic = "abort" # https://github.com/rust-lang/issues/67650
+overflow-checks = true
+[profile.bench]
+overflow-checks = true
+
+[profile.dev.package]
 # Always compile Monero (and a variety of dependencies) with optimizations due
 # to the extensive operations required for Bulletproofs
-[profile.dev.package]
 subtle = { opt-level = 3 }
-curve25519-dalek = { opt-level = 3 }
+
+sha3 = { opt-level = 3 }
+blake2 = { opt-level = 3 }
 
 ff = { opt-level = 3 }
 group = { opt-level = 3 }
 
 crypto-bigint = { opt-level = 3 }
+curve25519-dalek = { opt-level = 3 }
 dalek-ff-group = { opt-level = 3 }
-minimal-ed448 = { opt-level = 3 }
 
 multiexp = { opt-level = 3 }
 
+monero-io = { opt-level = 3 }
+monero-primitives = { opt-level = 3 }
+monero-ed25519 = { opt-level = 3 }
+monero-mlsag = { opt-level = 3 }
+monero-clsag = { opt-level = 3 }
+monero-borromean = { opt-level = 3 }
+monero-bulletproofs-generators = { opt-level = 3 }
+monero-bulletproofs = {opt-level = 3 }
 monero-oxide = { opt-level = 3 }
 
-[profile.release]
-panic = "unwind"
-overflow-checks = true
+# Always compile the eVRF DKG tree with optimizations as well
+secp256k1 = { opt-level = 3 }
+secq256k1 = { opt-level = 3 }
+embedwards25519 = { opt-level = 3 }
+generalized-bulletproofs = { opt-level = 3 }
+generalized-bulletproofs-circuit-abstraction = { opt-level = 3 }
+generalized-bulletproofs-ec-gadgets = { opt-level = 3 }
+
+# revm also effectively requires being built with optimizations
+revm = { opt-level = 3 }
+revm-bytecode = { opt-level = 3 }
+revm-context = { opt-level = 3 }
+revm-context-interface = { opt-level = 3 }
+revm-database = { opt-level = 3 }
+revm-database-interface = { opt-level = 3 }
+revm-handler = { opt-level = 3 }
+revm-inspector = { opt-level = 3 }
+revm-interpreter = { opt-level = 3 }
+revm-precompile = { opt-level = 3 }
+revm-primitives = { opt-level = 3 }
+revm-state = { opt-level = 3 }
 
 [patch.crates-io]
-# Dependencies from monero-oxide which originate from within our own tree
-std-shims = { path = "common/std-shims" }
+# Point to empty crates for crates unused within in our tree
+libp2p-quic = { path = "patches/libp2p-quic" }
+libp2p-dns = { path = "patches/libp2p-dns" }
+# Only needed to build `hickory-proto` for Android
+jni = { path = "patches/jni" }
+# Only needed to build `libp2p-swarm` for WASM
+wasm-bindgen-futures = { path = "patches/wasm-bindgen-futures" }
+
+alloy-eip2124 = { path = "patches/ethereum/alloy-eip2124" }
+ark-ff-03 = { package = "ark-ff", path = "patches/ethereum/ark-ff-0.3" }
+ark-ff-04 = { package = "ark-ff", path = "patches/ethereum/ark-ff-0.4" }
+ark-ff-05 = { package = "ark-ff", path = "patches/ethereum/ark-ff-0.5" }
+c-kzg = { path = "patches/ethereum/c-kzg" }
+fastrlp-3 = { package = "fastrlp", path = "patches/ethereum/fastrlp-0.3" }
+fastrlp-4 = { package = "fastrlp", path = "patches/ethereum/fastrlp-0.4" }
+primitive-types-12 = { package = "primitive-types", path = "patches/ethereum/primitive-types-0.12" }
+rapidhash = { path = "patches/ethereum/rapidhash" }
+rlp = { path = "patches/ethereum/rlp" }
+secp256k1-30 = { package = "secp256k1", path = "patches/ethereum/secp256k1-0.30" }
+secp256k1-31 = { package = "secp256k1", path = "patches/ethereum/secp256k1-0.31" }
+
+# Patches to minimize the scope of `alloy`
+fixed-cache = { path = "patches/ethereum/fixed-cache" }
+alloy-chains = { path = "patches/ethereum/alloy-chains" }
+alloy-hardforks = { path = "patches/ethereum/alloy-hardforks" }
+
+# Dependencies from monero-oxide which originate from within our own tree,
+# potentially shimmed to account for deviations since publishing
+std-shims = { path = "patches/std-shims" }
 simple-request = { path = "common/request" }
-dalek-ff-group = { path = "crypto/dalek-ff-group" }
 flexible-transcript = { path = "crypto/transcript" }
+multiexp = { path = "crypto/multiexp" }
+ciphersuite = { path = "patches/ciphersuite" }
+dalek-ff-group = { path = "crypto/dalek-ff-group" }
+minimal-ed448 = { path = "crypto/ed448" }
 modular-frost = { path = "crypto/frost" }
 
-# https://github.com/rust-lang-nursery/lazy-static.rs/issues/201
-lazy_static = { git = "https://github.com/rust-lang-nursery/lazy-static.rs", rev = "5735630d46572f1e5377c8f2ba0f79d18f53b10c" }
-
-# These have `std` alternatives
-matches = { path = "patches/matches" }
+# Patches due to `std` now including the required functionality
+lazy_static = { path = "patches/lazy_static" }
+# This has a non-deprecated `std` alternative since Rust's 2024 edition
 home = { path = "patches/home" }
 
-# directories-next was created because directories was unmaintained
-# directories-next is now unmaintained while directories is maintained
-# The directories author pulls in ridiculously pointless crates and prefers
-# copyleft licenses
-# The following two patches resolve everything
+# Updates to the latest version
+cpufeatures = { path = "patches/cpufeatures" }
+dtoa = { path = "patches/dtoa" }
+getrandom-02 = { package = "getrandom", path = "patches/getrandom-0.2" }
+getrandom-03 = { package = "getrandom", path = "patches/getrandom-0.3" }
+rocksdb = { path = "patches/rocksdb" }
+ryu = { path = "patches/ryu" }
+thiserror = { path = "patches/thiserror" }
+
+# `futures-timer` can be replaced with `tokio`
+futures-timer = { path = "patches/futures-timer" }
+# `hex_lit` can be replaced with `hex-literal` (from RustCrypto)
+hex_lit = { path = "patches/hex_lit" }
+# `rustc-hex` (a Parity-published crate extracted from `rustc`) can be replaced with <50 lines
+rustc-hex = { path = "patches/rustc-hex" }
+# `serde_with` is a massive bucket crate which we slim down
+serde_with = { path = "patches/serde_with" }
+# `keccak-asm` is liberal with 'use at your risk', yet API-compatible with `sha3`, so we prefer the latter
+keccak-asm = { path = "patches/keccak-asm" }
+# `blake2b_simd` is used by `multihash` and isn't worth it compared to just using `blake2`
+blake2b_simd = { path = "patches/blake2b_simd" }
+
+# `option-ext` is a copyleft library for a single one liner, which we provide ourselves
 option-ext = { path = "patches/option-ext" }
-directories-next = { path = "patches/directories-next" }
+# This is a trivial third-party crate which over-scopes its dependencies
+aurora-engine-modexp = { path = "patches/ethereum/aurora-engine-modexp" }
+# `nonzero_ext` is more than 300 lines when we only need 10
+nonzero_ext = { path = "patches/nonzero_ext" }
+
+# Patch to include `FromUniformBytes<64>` over `Scalar`
+k256 = { git = "https://github.com/kayabaNerve/elliptic-curves", rev = "8293be3f9855eea0936523a9b100f1f69261ea4b" }
+p256 = { git = "https://github.com/kayabaNerve/elliptic-curves", rev = "8293be3f9855eea0936523a9b100f1f69261ea4b" }
+
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
+# https://doc.rust-lang.org/rustc/lints/listing/allowed-by-default.html
+ambiguous_negative_literals = "warn"
+closure_returning_async_block = "warn"
+deprecated_safe = "warn"
+deref_into_dyn_supertrait = "warn"
+explicit_outlives_requirements = "warn"
+impl_trait_redundant_captures = "warn"
+macro_use_extern_crate = "warn"
+meta_variable_misuse = "warn"
+# missing_docs = "warn" # TODO: Enable
+non_ascii_idents = "warn"
+redundant_lifetimes = "warn"
+single_use_lifetimes = "warn"
+trivial_casts = "warn"
+unit_bindings = "warn"
+unsafe_attr_outside_unsafe = "warn"
+# unused_crate_dependencies = "warn" # TODO: Enable
+unused_extern_crates = "warn"
+unused_import_braces = "warn"
+unused_lifetimes = "warn"
+unused_macro_rules = "warn"
+
+[workspace.lints.cargo]
+manual_readme = "warn"
+missing_lints_inheritance = "warn"
+non_kebab_case_bins = "warn"
+non_kebab_case_features = "warn"
+non_kebab_case_packages = "warn"
+redundant_homepage = "warn"
+redundant_readme = "warn"
+unknown_lints = "warn"
+unused_dependencies = "warn"
+unused_workspace_dependencies = "warn"
+unused_workspace_package_fields = "warn"
+# TODO: Lint for implicit features?
 
 [workspace.lints.clippy]
-uninlined_format_args = "allow" # TODO
-unwrap_or_default = "allow"
+# Manually verified with a GitHub workflow
+incompatible_msrv = "allow"
+# `x % 2` is simple and straightforward
 manual_is_multiple_of = "allow"
-incompatible_msrv = "allow" # Manually verified with a GitHub workflow
-borrow_as_ptr = "deny"
-cast_lossless = "deny"
-cast_possible_truncation = "deny"
-cast_possible_wrap = "deny"
-cast_precision_loss = "deny"
-cast_ptr_alignment = "deny"
-cast_sign_loss = "deny"
-checked_conversions = "deny"
-cloned_instead_of_copied = "deny"
-enum_glob_use = "deny"
-expl_impl_clone_on_copy = "deny"
-explicit_into_iter_loop = "deny"
-explicit_iter_loop = "deny"
-flat_map_option = "deny"
-float_cmp = "deny"
-fn_params_excessive_bools = "deny"
-ignored_unit_patterns = "deny"
-implicit_clone = "deny"
-inefficient_to_string = "deny"
-invalid_upcast_comparisons = "deny"
-large_stack_arrays = "deny"
-linkedlist = "deny"
-macro_use_imports = "deny"
-manual_instant_elapsed = "deny"
-# TODO manual_let_else = "deny"
-manual_ok_or = "deny"
-manual_string_new = "deny"
-map_unwrap_or = "deny"
-match_bool = "deny"
-match_same_arms = "deny"
-missing_fields_in_debug = "deny"
-# TODO needless_continue = "deny"
-needless_pass_by_value = "deny"
-ptr_cast_constness = "deny"
-range_minus_one = "deny"
-range_plus_one = "deny"
-redundant_closure_for_method_calls = "deny"
-redundant_else = "deny"
-string_add_assign = "deny"
-unchecked_time_subtraction = "deny"
-unnecessary_box_returns = "deny"
-unnecessary_join = "deny"
-unnecessary_wraps = "deny"
-unnested_or_patterns = "deny"
-unused_async = "deny"
-unused_self = "deny"
-zero_sized_map_values = "deny"
-
-# TODO: These were incurred when updating Rust as necessary for compilation, yet aren't being fixed
-# at this time due to the impacts it'd have throughout the repository (when this isn't actively the
-# primary branch, `next` is)
+# `.unwrap_or(x)` unwraps to `x`. This lint then errors if `x == Default::default()`
+# Wanting to unwrap to `x` does not mean the caller wants to unwrap to `Default::default()`.
+# While this asserts the current value of `Default::default()`, it doesn't guarantee that value
+# will remain the default moving forward, which risks the unwrapped value changing unexpectedly.
+unwrap_or_default = "allow"
+# `.map(f).unwrap_or(x)` is clearer than `.map_or(x, f)`.
+map_unwrap_or = "allow"
+# Explicit `continue`s can increase readability.
 needless_continue = "allow"
-needless_lifetimes = "allow"
-useless_conversion = "allow"
-empty_line_after_doc_comments = "allow"
-manual_div_ceil = "allow"
-manual_let_else = "allow"
-unnecessary_map_or = "allow"
-result_large_err = "allow"
-unneeded_struct_pattern = "allow"
-[workspace.lints.rust]
-unused = "allow" # TODO: https://github.com/rust-lang/rust/issues/147648
-mismatched_lifetime_syntaxes = "allow"
-unused_attributes = "allow"
-unused_parens = "allow"
+
+# Enable the off-by-default lint categories, before disabling those we don't want
+pedantic = { level = "warn", priority = -1 }
+case_sensitive_file_extension_comparisons = "allow"
+default_trait_access = "allow" # TODO: Revisit
+doc_markdown = "allow" # TODO: deny
+explicit_deref_methods = "allow"
+if_not_else = "allow"
+implicit_hasher = "allow" # TODO: deny
+inconsistent_struct_constructor = "allow"
+items_after_statements = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow" # TODO: Revisit
+naive_bytecount = "allow" # We don't want a suggestion to add an external dependency
+similar_names = "allow"
+# This triggers on the exhaustive `match opt { Some => {}, None => {} }`, which is excessive
+single_match_else = "allow"
+struct_field_names = "allow"
+too_many_lines = "allow"
+wildcard_imports = "allow"
+
+style = { level = "warn", priority = -1 }
+blocks_in_conditions = "allow"
+items_after_test_module = "allow"
+
+# Cherry-pick lints from the `restrictions` group
+alloc_instead_of_core = "warn"
+as_conversions = "warn"
+as_pointer_underscore = "warn"
+as_underscore = "warn"
+assertions_on_result_states = "warn"
+cfg_not_test = "warn"
+create_dir = "warn"
+dbg_macro = "warn"
+filetype_is_file = "warn"
+float_arithmetic = "warn"
+float_cmp_const = "warn"
+fn_to_numeric_cast_any = "warn"
+get_unwrap = "warn"
+if_then_some_else_none = "warn"
+# iter_over_hash_type = "warn" # TODO: Enable
+lossy_float_literal = "warn"
+# partial_pub_fields = "warn" # TODO: Revisit
+precedence_bits = "warn"
+rc_mutex = "warn"
+# redundant_test_prefix = "warn" # TODO: Enable
+same_name_method = "warn"
+std_instead_of_alloc = "warn"
+std_instead_of_core = "warn"
+str_to_string = "warn"
+string_slice = "warn"
+suspicious_xor_used_as_pow = "warn"
+# todo = "warn" # TODO: Enable
+unnecessary_self_imports = "warn"
+unused_trait_names = "warn"
+wildcard_enum_match_arm = "warn"

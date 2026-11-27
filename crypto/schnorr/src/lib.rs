@@ -1,28 +1,31 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
-#![cfg_attr(not(feature = "std"), no_std)]
+#![deny(missing_docs)]
+#![no_std]
 
-use core::ops::Deref;
-#[cfg(not(feature = "std"))]
-#[macro_use]
+use core::ops::Deref as _;
+#[cfg(feature = "alloc")]
 extern crate alloc;
-use std_shims::{
-  vec::Vec,
-  io::{self, Read, Write},
-};
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
+use std_shims::io;
+
+#[cfg(feature = "alloc")]
 use rand_core::{RngCore, CryptoRng};
 
 use zeroize::{Zeroize, Zeroizing};
 
 use ciphersuite::{
   group::{
-    ff::{Field, PrimeField},
-    Group, GroupEncoding,
+    ff::{Field as _, PrimeField as _},
+    Group as _, GroupEncoding as _,
   },
-  Ciphersuite,
+  GroupIo,
 };
-use multiexp::{multiexp_vartime, BatchVerifier};
+use multiexp::multiexp_vartime;
+#[cfg(feature = "alloc")]
+use multiexp::BatchVerifier;
 
 /// Half-aggregation from <https://eprint.iacr.org/2021/350>.
 #[cfg(feature = "aggregate")]
@@ -33,34 +36,46 @@ mod tests;
 
 /// A Schnorr signature of the form (R, s) where s = r + cx.
 ///
-/// These are intended to be strict. It is generic over Ciphersuite which is for PrimeGroups,
+/// These are intended to be strict. It is generic over `GroupIo` which is for `PrimeGroup`s,
 /// and mandates canonical encodings in its read function.
 ///
-/// RFC 8032 has an alternative verification formula, 8R = 8s - 8cX, which is intended to handle
-/// torsioned nonces/public keys. Due to this library's strict requirements, such signatures will
-/// not be verifiable with this library.
-#[allow(non_snake_case)]
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Zeroize)]
-pub struct SchnorrSignature<C: Ciphersuite> {
+/// RFC 8032 has an alternative verification formula for Ed25519, `8R = 8s - 8cX`, which is
+/// intended to handle torsioned nonces/public keys. Due to this library's strict requirements,
+/// such signatures will not be verifiable with this library.
+///
+/// This signature is not inherently validated and must be explicitly verified.
+#[derive(Clone, Copy, Debug, Zeroize)]
+#[expect(non_snake_case)]
+pub struct SchnorrSignature<C: GroupIo> {
+  /// The nonce commitment.
   pub R: C::G,
+  /// The response to the challenge.
   pub s: C::F,
 }
+impl<C: GroupIo> PartialEq for SchnorrSignature<C> {
+  fn eq(&self, other: &Self) -> bool {
+    let Self { R, s } = *self;
+    (R == other.R) && (s == other.s)
+  }
+}
+impl<C: GroupIo> Eq for SchnorrSignature<C> {}
 
-impl<C: Ciphersuite> SchnorrSignature<C> {
-  /// Read a SchnorrSignature from something implementing Read.
-  pub fn read<R: Read>(reader: &mut R) -> io::Result<Self> {
-    Ok(SchnorrSignature { R: C::read_G(reader)?, s: C::read_F(reader)? })
+impl<C: GroupIo> SchnorrSignature<C> {
+  /// Read from something implementing [`io::Read`].
+  pub fn read(mut reader: impl io::Read) -> io::Result<Self> {
+    Ok(SchnorrSignature { R: C::read_G(&mut reader)?, s: C::read_F(&mut reader)? })
   }
 
-  /// Write a SchnorrSignature to something implementing Read.
-  pub fn write<W: Write>(&self, writer: &mut W) -> io::Result<()> {
+  /// Write to something implementing [`io::Write`].
+  pub fn write(&self, mut writer: impl io::Write) -> io::Result<()> {
     writer.write_all(self.R.to_bytes().as_ref())?;
     writer.write_all(self.s.to_repr().as_ref())
   }
 
-  /// Serialize a SchnorrSignature, returning a `Vec<u8>`.
+  /// Serialize to a `Vec<u8>`.
+  #[cfg(feature = "alloc")]
   pub fn serialize(&self) -> Vec<u8> {
-    let mut buf = vec![];
+    let mut buf = alloc::vec![];
     self.write(&mut buf).unwrap();
     buf
   }
@@ -70,7 +85,7 @@ impl<C: Ciphersuite> SchnorrSignature<C> {
   /// This challenge must be properly crafted, which means being binding to the public key, nonce,
   /// and any message. Failure to do so will let a malicious adversary to forge signatures for
   /// different keys/messages.
-  #[allow(clippy::needless_pass_by_value)] // Prevents further-use of this single-use value
+  #[expect(clippy::needless_pass_by_value)] // Prevents further-use of this single-use value
   pub fn sign(
     private_key: &Zeroizing<C::F>,
     nonce: Zeroizing<C::F>,
@@ -114,6 +129,7 @@ impl<C: Ciphersuite> SchnorrSignature<C> {
   /// This challenge must be properly crafted, which means being binding to the public key, nonce,
   /// and any message. Failure to do so will let a malicious adversary to forge signatures for
   /// different keys/messages.
+  #[cfg(feature = "alloc")]
   pub fn batch_verify<R: RngCore + CryptoRng, I: Copy + Zeroize>(
     &self,
     rng: &mut R,

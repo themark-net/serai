@@ -1,11 +1,13 @@
+use std_shims::prelude::*;
+
 use rand_core::OsRng;
 
-use ciphersuite::Ciphersuite;
+use ciphersuite::GroupIo as _;
 
 use schnorr::SchnorrSignature;
 
 use crate::{
-  curve::{Ed448, Ietf8032Ed448Hram, IetfEd448Hram},
+  curve::{Ed448, Irtf8032Ed448Hram, IrtfEd448Hram},
   tests::vectors::{Vectors, test_with_vectors},
 };
 
@@ -21,15 +23,15 @@ use crate::{
 fn ed448_8032_vector() {
   let context = hex::decode("666f6f").unwrap();
 
-  #[allow(non_snake_case)]
-  let A = Ed448::read_G::<&[u8]>(
-    &mut hex::decode(
+  #[expect(non_snake_case)]
+  let A = Ed448::read_G(
+    hex::decode(
       "43ba28f430cdff456ae531545f7ecd0ac834a55d9358c0372bfa0c6c".to_owned() +
         "6798c0866aea01eb00742802b8438ea4cb82169c235160627b4c3a94" +
         "80",
     )
     .unwrap()
-    .as_ref(),
+    .as_slice(),
   )
   .unwrap();
 
@@ -44,18 +46,18 @@ fn ed448_8032_vector() {
       "00",
   )
   .unwrap();
-  #[allow(non_snake_case)]
-  let R = Ed448::read_G::<&[u8]>(&mut sig.as_ref()).unwrap();
-  let s = Ed448::read_F::<&[u8]>(&mut &sig[57 ..]).unwrap();
+  #[expect(non_snake_case)]
+  let R = Ed448::read_G(sig.as_slice()).unwrap();
+  let s = Ed448::read_F(&sig[57 ..]).unwrap();
 
   assert!(
-    SchnorrSignature::<Ed448> { R, s }.verify(A, Ietf8032Ed448Hram::hram(&context, &R, &A, &msg))
+    SchnorrSignature::<Ed448> { R, s }.verify(A, Irtf8032Ed448Hram::hram(&context, &R, &A, &msg))
   );
 }
 
 #[test]
 fn ed448_vectors() {
-  test_with_vectors::<_, Ed448, IetfEd448Hram>(
+  test_with_vectors::<_, Ed448, IrtfEd448Hram>(
     &mut OsRng,
     &Vectors::from(
       serde_json::from_str::<serde_json::Value>(include_str!("vectors/frost-ed448-shake256.json"))

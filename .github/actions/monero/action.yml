@@ -1,0 +1,90 @@
+name: monero-regtest
+description: Spawns a regtest Monero daemon
+
+inputs:
+  version:
+    description: "Version to download and run"
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Restore Monero Daemon Cache
+      id: cache-monerod
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # 6.1.0
+      with:
+        path: monerod*
+        key: monerod-${{ runner.os }}-${{ runner.arch }}-${{ inputs.version || 'v0.18.5.4' }}
+
+    - name: Download the Monero Daemon
+      if: steps.cache-monerod.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version || 'v0.18.5.4' }}
+      run: |
+        OS="${{ runner.os }}"
+        ARCH="${{ runner.arch }}"
+
+        OS=$(echo "${OS}" | tr "[:upper:]" "[:lower:]")
+        ARCH=$(echo "${ARCH}" | tr "[:upper:]" "[:lower:]")
+        EXT="tar.bz2"
+
+        if [ "${OS}" = "windows" ]; then
+          OS="win"
+          EXT="zip"
+        fi
+        if [ "${ARCH}" = "arm64" ]; then
+          ARCH="armv8"
+        fi
+        if [ "${OS}" = "macos" ]; then
+          OS="mac"
+          # If this is an ARM macOS downloading a historic version, download x64 to run via Rosetta
+          if [ $(echo "${VERSION}" | cut -d'.' -f2) -lt 18 ]; then
+            ARCH="x64"
+          fi
+        fi
+
+        FILE="monero-${OS}-${ARCH}-${VERSION}.${EXT}"
+        mkdir monero-tmp
+        cd monero-tmp
+        curl -L "https://downloads.getmonero.org/cli/${FILE}" -o "${FILE}"
+        if [ "${EXT}" = "tar.bz2" ]; then
+          tar -xf "${FILE}"
+        fi
+        if [ "${EXT}" = "zip" ]; then
+          unzip "${FILE}"
+        fi
+        cd ..
+
+        mv $(find . -type f -name "monerod*") .
+        rm -rf monero-tmp
+
+    - name: Save Monero Daemon Cache
+      if: steps.cache-monerod.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # 6.1.0
+      with:
+        path: monerod*
+        key: monerod-${{ runner.os }}-${{ runner.arch }}-${{ inputs.version || 'v0.18.5.4' }}
+
+    - name: Install the Monero Daemon
+      shell: bash
+      run: |
+        if [ "${{ runner.os }}" = "Windows" ]; then
+          TARGET="/C/Windows/System32/"
+        else
+          mkdir -p /usr/local/bin
+          TARGET=/usr/local/bin/
+        fi
+        mv $(find . -type f -name "monerod*") "$TARGET"
+
+    - name: Monero Regtest Daemon
+      shell: bash
+      run: |
+        COMMAND="./orchestration/dev/networks/monero/run.sh"
+
+        if [ "${{ runner.os }}" = "Windows" ]; then
+          $COMMAND --install-service
+          $COMMAND --start-service
+        else
+          $COMMAND --detach
+        fi

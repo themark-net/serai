@@ -1,0 +1,40 @@
+[package]
+name = "prime-field"
+version = "0.1.0"
+description = "A library to declare an ff::PrimeField via crypto-bigint"
+license = "MIT"
+repository = "https://github.com/serai-dex/serai/tree/develop/crypto/prime-field"
+authors = ["Luke Parker <lukeparker5132@gmail.com>"]
+keywords = ["ff", "field", "prime", "crypto-bigint"]
+edition = "2024"
+rust-version = "1.87"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[package.metadata.cargo-machete]
+ignored = ["tap"]
+
+[lints]
+workspace = true
+
+[dependencies]
+paste = { version = "1", default-features = false }
+zeroize = { version = "1.5", default-features = false }
+subtle = { version = "2.4", default-features = false }
+rand_core = { version = "0.6", default-features = false }
+
+ctutils = { version = "0.4", default-features = false, features = ["subtle"] }
+crypto-bigint = { version = "0.7.9", default-features = false, features = ["zeroize"] }
+
+# `ff` requires `bitvec` requires `wyz 0.5.0` which requires `tap 1.0.1` but only specifies `tap 1.0.0`
+tap = { version = "1.0.1", default-features = false }
+ff = { version = "0.13", default-features = false, features = ["bits"] }
+
+ff-group-tests = { version = "0.13", path = "../ff-group-tests", optional = true }
+
+[features]
+alloc = ["zeroize/alloc", "ff/alloc"]
+std = ["alloc", "zeroize/std", "subtle/std", "rand_core/std", "ff/std", "dep:ff-group-tests"]
+default = ["std"]

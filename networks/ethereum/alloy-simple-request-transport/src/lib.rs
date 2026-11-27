@@ -7,7 +7,7 @@ use std::io;
 use alloy_json_rpc::{RequestPacket, ResponsePacket};
 use alloy_transport::{TransportError, TransportErrorKind, TransportFut};
 
-use simple_request::{hyper, Request, Client};
+use simple_request::{hyper, Error, Request, TokioClient as Client};
 
 use tower::Service;
 
@@ -18,8 +18,8 @@ pub struct SimpleRequest {
 }
 
 impl SimpleRequest {
-  pub fn new(url: String) -> Self {
-    Self { client: Client::with_connection_pool(), url }
+  pub fn new(url: String) -> Result<Self, Error> {
+    Ok(Self { client: Client::with_connection_pool()?, url })
   }
 }
 
@@ -37,12 +37,11 @@ impl Service<RequestPacket> for SimpleRequest {
   fn call(&mut self, req: RequestPacket) -> Self::Future {
     let inner = self.clone();
     Box::pin(async move {
-      let packet = req.serialize().map_err(TransportError::SerError)?;
       let request = Request::from(
         hyper::Request::post(&inner.url)
           .header("Content-Type", "application/json")
-          .body(serde_json::to_vec(&packet).map_err(TransportError::SerError)?.into())
-          .unwrap(),
+          .body(serde_json::to_vec(&req).map_err(TransportError::SerError)?.into())
+          .map_err(|e| TransportErrorKind::custom(io::Error::other(format!("{e:?}"))))?,
       );
 
       let mut res = inner

@@ -1,25 +1,33 @@
+// We compile this as a module, yet Rust will also compile it as a standalone 'test', hence this
+#![allow(dead_code)]
+
 use std::sync::LazyLock;
 
 use bitcoin_serai::rpc::Rpc;
 
 use tokio::sync::Mutex;
 
-#[allow(dead_code)]
 pub(crate) static SEQUENTIAL: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
-#[allow(dead_code)]
 pub(crate) async fn rpc() -> Rpc {
-  let rpc = Rpc::new("http://serai:seraidex@127.0.0.1:8332".to_string()).await.unwrap();
+  let rpc = Rpc::new("http://serai:seraidex@127.0.0.1:8332".to_owned()).await.unwrap();
 
   // If this node has already been interacted with, clear its chain
   if rpc.get_latest_block_number().await.unwrap() > 0 {
     rpc
-      .rpc_call(
+      .call::<()>(
         "invalidateblock",
-        serde_json::json!([hex::encode(rpc.get_block_hash(1).await.unwrap())]),
+        &format!(
+          r#"["{}"]"#,
+          bitcoin::consensus::encode::serialize_hex(&{
+            let mut hash = rpc.get_block_hash(1).await.unwrap();
+            hash.reverse();
+            hash
+          })
+        ),
       )
       .await
-      .unwrap()
+      .unwrap();
   }
 
   rpc

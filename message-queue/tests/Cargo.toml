@@ -1,0 +1,35 @@
+[package]
+name = "serai-message-queue-tests"
+version = "0.1.0"
+description = "Tests for Serai's Message Queue"
+license = "AGPL-3.0-only"
+repository = "https://github.com/serai-dex/serai/tree/develop/tests/message-queue"
+authors = ["Luke Parker <lukeparker5132@gmail.com>"]
+keywords = []
+edition = "2024"
+publish = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints]
+workspace = true
+
+[dependencies]
+hex = "0.4"
+
+zeroize = { version = "1", default-features = false }
+rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
+
+ciphersuite = { path = "../../crypto/ciphersuite", default-features = false, features = ["std"] }
+dalek-ff-group = { path = "../../crypto/dalek-ff-group", default-features = false, features = ["std"] }
+
+serai-primitives = { path = "../../substrate/primitives" }
+
+tokio = { version = "1", features = ["time"] }
+dockertest = "0.5"
+serai-docker-tests = { path = "../../tests/docker" }
+
+[dev-dependencies]
+serai-message-queue-client = { path = "../client" }

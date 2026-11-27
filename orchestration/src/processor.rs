@@ -1,32 +1,35 @@
+use core::fmt::Write as _;
 use std::path::Path;
 
 use zeroize::Zeroizing;
 
 use dalek_ff_group::Ristretto;
-use ciphersuite::{group::ff::PrimeField, Ciphersuite};
+use ciphersuite::{group::ff::PrimeField as _, WrappedGroup};
 
 use crate::{Network, Os, mimalloc, os, build_serai_service, write_dockerfile};
 
-#[allow(clippy::needless_pass_by_value)]
+#[expect(clippy::needless_pass_by_value)]
 pub fn processor(
   orchestration_path: &Path,
   network: Network,
   coin: &'static str,
-  _coordinator_key: <Ristretto as Ciphersuite>::G,
-  coin_key: Zeroizing<<Ristretto as Ciphersuite>::F>,
-  entropy: Zeroizing<[u8; 32]>,
+  _coordinator_key: <Ristretto as WrappedGroup>::G,
+  processor_key: Zeroizing<<Ristretto as WrappedGroup>::F>,
+  substrate_evrf_key: Zeroizing<Vec<u8>>,
+  network_evrf_key: Zeroizing<Vec<u8>>,
 ) {
-  let setup = mimalloc(Os::Debian).to_string() +
+  let setup = mimalloc(Os::Debian, network.release()) +
     &build_serai_service(
       if coin == "ethereum" {
         r#"
 RUN cargo install svm-rs
-RUN svm install 0.8.26
-RUN svm use 0.8.26
+RUN svm install 0.8.34
+RUN svm use 0.8.34
 "#
       } else {
         ""
       },
+      Os::Debian,
       network.release(),
       &format!("binaries {} {coin}", network.db()),
       "serai-processor",
@@ -54,23 +57,24 @@ RUN apt install -y ca-certificates
 
   let mut env_vars = vec![
     ("MESSAGE_QUEUE_RPC", format!("serai-{}-message-queue", network.label())),
-    ("MESSAGE_QUEUE_KEY", hex::encode(coin_key.to_repr())),
-    ("ENTROPY", hex::encode(entropy.as_ref())),
-    ("NETWORK", coin.to_string()),
+    ("MESSAGE_QUEUE_KEY", hex::encode(processor_key.to_repr())),
+    ("SUBSTRATE_EVRF_KEY", hex::encode(substrate_evrf_key)),
+    ("NETWORK_EVRF_KEY", hex::encode(network_evrf_key)),
+    ("NETWORK", coin.to_owned()),
     ("NETWORK_RPC_LOGIN", format!("{RPC_USER}:{RPC_PASS}")),
     ("NETWORK_RPC_HOSTNAME", hostname),
     ("NETWORK_RPC_PORT", port),
-    ("DB_PATH", "/volume/processor-db".to_string()),
-    ("RUST_LOG", "info,serai_processor=debug".to_string()),
+    ("DB_PATH", "/volume/processor-db".to_owned()),
+    ("RUST_LOG", "info,serai_processor=debug".to_owned()),
   ];
   if coin == "ethereum" {
     env_vars
       .push(("ETHEREUM_RELAYER_HOSTNAME", format!("serai-{}-ethereum-relayer", network.label())));
-    env_vars.push(("ETHEREUM_RELAYER_PORT", "20830".to_string()));
+    env_vars.push(("ETHEREUM_RELAYER_PORT", "20830".to_owned()));
   }
   let mut env_vars_str = String::new();
   for (env_var, value) in env_vars {
-    env_vars_str += &format!(r#"{env_var}=${{{env_var}:="{value}"}} "#);
+    write!(&mut env_vars_str, r#"{env_var}=${{{env_var}:="{value}"}} "#).unwrap();
   }
 
   let run_processor = format!(
@@ -84,13 +88,13 @@ CMD {env_vars_str} serai-processor
 "#
   );
 
-  let run = os(Os::Debian, ADDITIONAL_ROOT, "processor") + &run_processor;
+  let run = os(Os::Debian, network.release(), ADDITIONAL_ROOT, "processor") + &run_processor;
   let res = setup + &run;
 
   let mut processor_path = orchestration_path.to_path_buf();
   processor_path.push("processor");
   processor_path.push(coin);
-  processor_path.push("Dockerfile");
+  processor_path.push("Containerfile");
 
   write_dockerfile(processor_path, &res);
 }

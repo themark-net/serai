@@ -1,7 +1,7 @@
-#![allow(deprecated)]
-
 use zeroize::Zeroizing;
 use rand_core::{RngCore, OsRng};
+
+use ciphersuite::{WrappedGroup, GroupIo};
 
 use scale::Encode;
 
@@ -23,7 +23,7 @@ pub const ETH_PORT: u32 = 8545;
 pub const XMR_PORT: u32 = 18081;
 
 pub fn bitcoin_instance() -> (TestBodySpecification, u32) {
-  serai_docker_tests::build("bitcoin".to_string());
+  serai_docker_tests::build("bitcoin".to_owned());
 
   let composition = TestBodySpecification::with_image(
     Image::with_repository("serai-dev-bitcoin").pull_policy(PullPolicy::Never),
@@ -33,7 +33,7 @@ pub fn bitcoin_instance() -> (TestBodySpecification, u32) {
 }
 
 pub fn ethereum_instance() -> (TestBodySpecification, u32) {
-  serai_docker_tests::build("ethereum".to_string());
+  serai_docker_tests::build("ethereum".to_owned());
 
   let composition = TestBodySpecification::with_image(
     Image::with_repository("serai-dev-ethereum").pull_policy(PullPolicy::Never),
@@ -44,7 +44,7 @@ pub fn ethereum_instance() -> (TestBodySpecification, u32) {
 }
 
 pub fn monero_instance() -> (TestBodySpecification, u32) {
-  serai_docker_tests::build("monero".to_string());
+  serai_docker_tests::build("monero".to_owned());
 
   let composition = TestBodySpecification::with_image(
     Image::with_repository("serai-dev-monero").pull_policy(PullPolicy::Never),
@@ -92,7 +92,7 @@ pub enum Wallet {
   },
   Ethereum {
     rpc_url: String,
-    key: <ciphersuite_kp256::Secp256k1 as Ciphersuite>::F,
+    key: <ciphersuite::Secp256k1 as WrappedGroup>::F,
     nonce: u64,
   },
   Monero {
@@ -151,8 +151,7 @@ impl Wallet {
       }
 
       ExternalNetworkId::Ethereum => {
-        use ciphersuite::group::ff::Field;
-        use ciphersuite_kp256::Secp256k1;
+        use ciphersuite::{group::ff::Field, Secp256k1};
         use ethereum_serai::alloy::{
           primitives::{U256, Address},
           simple_request_transport::SimpleRequest,
@@ -161,12 +160,12 @@ impl Wallet {
           network::Ethereum,
         };
 
-        let key = <Secp256k1 as Ciphersuite>::F::random(&mut OsRng);
+        let key = <Secp256k1 as WrappedGroup>::F::random(&mut OsRng);
         let address =
-          ethereum_serai::crypto::address(&(<Secp256k1 as Ciphersuite>::generator() * key));
+          ethereum_serai::crypto::address(&(<Secp256k1 as WrappedGroup>::generator() * key));
 
         let provider = RootProvider::<_, Ethereum>::new(
-          ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()), true),
+          ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()).unwrap(), true),
         );
 
         provider
@@ -320,11 +319,11 @@ impl Wallet {
         let one_eth = eighteen_decimals;
 
         let provider = Arc::new(RootProvider::<_, Ethereum>::new(
-          ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()), true),
+          ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()).unwrap(), true),
         ));
 
         let to_as_key = PublicKey::new(
-          <ciphersuite_kp256::Secp256k1 as Ciphersuite>::read_G(&mut to.as_slice()).unwrap(),
+          <ciphersuite::Secp256k1 as GroupIo>::read_G(&mut to.as_slice()).unwrap(),
         )
         .unwrap();
         let router_addr = {
@@ -452,7 +451,7 @@ impl Wallet {
           );
         }
 
-        let to_spend_key = decompress_point(<[u8; 32]>::try_from(to.as_ref()).unwrap()).unwrap();
+        let to_spend_key = decompress_point(<[u8; 32]>::try_from(to.as_slice()).unwrap()).unwrap();
         let to_view_key = additional_key::<Monero>(0);
         let to_addr = Address::new(
           Network::Mainnet,
@@ -505,7 +504,7 @@ impl Wallet {
         .unwrap()
       }
       Wallet::Ethereum { key, .. } => ExternalAddress::new(
-        ethereum_serai::crypto::address(&(ciphersuite_kp256::Secp256k1::generator() * key)).into(),
+        ethereum_serai::crypto::address(&(ciphersuite::Secp256k1::generator() * key)).into(),
       )
       .unwrap(),
       Wallet::Monero { view_pair, .. } => {

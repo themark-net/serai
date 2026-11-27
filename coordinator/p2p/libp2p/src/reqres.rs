@@ -1,0 +1,141 @@
+use core::{marker::PhantomData, fmt, time::Duration};
+use std::io;
+
+use borsh::{BorshSerialize, BorshDeserialize};
+
+use futures_util::{AsyncRead, AsyncReadExt as _, AsyncWrite, AsyncWriteExt as _};
+
+use libp2p::request_response::{
+  self, Codec as CodecTrait, Event as GenericEvent, Config, Behaviour, ProtocolSupport,
+};
+pub use request_response::Message;
+
+use serai_cosign::SignedCosign;
+
+use tributary_framework::Transaction;
+
+use serai_coordinator_p2p::{SyncRequest, CommittedTributaryBlock};
+
+const PROTOCOL: &str = "/serai/coordinator/reqres/1.0.0";
+
+/// Requests which can be made via the request-response protocol.
+#[derive(Clone, Copy, Debug, BorshSerialize, BorshDeserialize)]
+pub(crate) enum Request {
+  /// A sync request informing our peers of our latest block, for the specified blockchain.
+  ///
+  /// If our peers have more blocks than us, they're expected to respond with those blocks.
+  SyncRequest(SyncRequest),
+  /// A request for the notable cosigns for a global session.
+  NotableCosigns { global_session: [u8; 32] },
+}
+
+/// Responses which can be received via the request-response protocol.
+#[derive(Clone, BorshSerialize, BorshDeserialize)]
+pub enum Response<Tx: Transaction> {
+  None,
+  Blocks(#[borsh(bound(serialize = "", deserialize = ""))] Vec<CommittedTributaryBlock<Tx>>),
+  NotableCosigns(Vec<SignedCosign>),
+}
+impl<Tx: Transaction> fmt::Debug for Response<Tx> {
+  fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      Response::None => fmt.debug_struct("Response::None").finish(),
+      Response::Blocks(_) => fmt.debug_struct("Response::Block").finish_non_exhaustive(),
+      Response::NotableCosigns(_) => {
+        fmt.debug_struct("Response::NotableCosigns").finish_non_exhaustive()
+      }
+    }
+  }
+}
+
+/// The codec used for the request-response protocol.
+///
+/// We don't use CBOR or JSON, but use borsh to create `Vec<u8>`s we then length-prefix. While
+/// ideally, we'd use borsh directly with the `io` traits defined here, they're async and there
+/// isn't an amenable API within borsh for incremental deserialization.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Codec<Tx: Transaction>(PhantomData<Tx>);
+impl<Tx: Transaction> Default for Codec<Tx> {
+  fn default() -> Self {
+    Self(PhantomData)
+  }
+}
+impl<Tx: Transaction> Codec<Tx> {
+  async fn read<M: BorshDeserialize>(io: &mut (impl Unpin + AsyncRead)) -> io::Result<M> {
+    let mut len = [0; 4];
+    io.read_exact(&mut len).await?;
+    let len = usize::try_from(u32::from_le_bytes(len)).expect("not at least a 32-bit platform?");
+    if len > {
+      // The maximum message size for the request-response protocol
+      // This is derived from the sync request's response as it's our largest message
+      1_024 + serai_coordinator_p2p::sync_batch_size::<Tx>()
+    } {
+      Err(io::Error::other("request length exceeded the max libp2p reqres message size"))?;
+    }
+    // This may be a non-trivial allocation easily causable
+    // While we could chunk the read, meaning we only perform the allocation as bandwidth is used,
+    // the max message size should be sufficiently sane
+    let mut buf = vec![0; len];
+    io.read_exact(&mut buf).await?;
+    let mut buf = buf.as_slice();
+    let res = M::deserialize(&mut buf)?;
+    if !buf.is_empty() {
+      Err(io::Error::other("p2p message had extra data appended to it"))?;
+    }
+    Ok(res)
+  }
+  fn write(
+    io: &mut (impl Unpin + AsyncWrite),
+    msg: &impl BorshSerialize,
+  ) -> impl Future<Output = io::Result<()>> {
+    let msg = borsh::to_vec(msg).unwrap();
+    async move {
+      io.write_all(&u32::try_from(msg.len()).unwrap().to_le_bytes()).await?;
+      io.write_all(&msg).await
+    }
+  }
+}
+impl<Tx: Send + Transaction> CodecTrait for Codec<Tx> {
+  type Protocol = &'static str;
+  type Request = Request;
+  type Response = Response<Tx>;
+
+  async fn read_request<R: Send + Unpin + AsyncRead>(
+    &mut self,
+    _: &Self::Protocol,
+    io: &mut R,
+  ) -> io::Result<Request> {
+    Self::read(io).await
+  }
+  async fn read_response<R: Send + Unpin + AsyncRead>(
+    &mut self,
+    _: &Self::Protocol,
+    io: &mut R,
+  ) -> io::Result<Self::Response> {
+    Self::read(io).await
+  }
+  async fn write_request<W: Send + Unpin + AsyncWrite>(
+    &mut self,
+    _: &Self::Protocol,
+    io: &mut W,
+    req: Request,
+  ) -> io::Result<()> {
+    Self::write(io, &req).await
+  }
+  async fn write_response<W: Send + Unpin + AsyncWrite>(
+    &mut self,
+    _: &Self::Protocol,
+    io: &mut W,
+    res: Self::Response,
+  ) -> io::Result<()> {
+    Self::write(io, &res).await
+  }
+}
+
+pub(crate) type Event<Tx> = GenericEvent<Request, Response<Tx>>;
+
+pub(crate) type Behavior<Tx> = Behaviour<Codec<Tx>>;
+pub(crate) fn new_behavior<Tx: Send + Transaction>() -> Behavior<Tx> {
+  let config = Config::default().with_request_timeout(Duration::from_secs(5));
+  Behavior::new([(PROTOCOL, ProtocolSupport::Full)], config)
+}

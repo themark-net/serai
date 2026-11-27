@@ -1,31 +1,33 @@
-use std_shims::vec::Vec;
+use alloc::vec::Vec;
 
 use rand_core::{RngCore, CryptoRng};
 
 use zeroize::{Zeroize, Zeroizing};
+use subtle::ConditionallySelectable;
 
-use ff::{Field, PrimeFieldBits};
-use group::Group;
+use ff::{Field as _, PrimeFieldBits};
+use group::prime::PrimeGroup;
 
 use crate::{multiexp, multiexp_vartime};
 
 // Flatten the contained statements to a single Vec.
 // Wrapped in Zeroizing in case any of the included statements contain private values.
-#[allow(clippy::type_complexity)]
-fn flat<Id: Copy + Zeroize, G: Zeroize + Group<Scalar: Zeroize + PrimeFieldBits>>(
+#[expect(clippy::type_complexity)]
+fn flat<Id: Copy + Zeroize, G: Zeroize + PrimeGroup<Scalar: Zeroize + PrimeFieldBits>>(
   slice: &[(Id, Vec<(G::Scalar, G)>)],
 ) -> Zeroizing<Vec<(G::Scalar, G)>> {
   Zeroizing::new(slice.iter().flat_map(|pairs| pairs.1.iter()).copied().collect::<Vec<_>>())
 }
 
 /// A batch verifier intended to verify a series of statements are each equivalent to zero.
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity)]
 #[derive(Clone, Zeroize)]
-pub struct BatchVerifier<Id: Copy + Zeroize, G: Zeroize + Group<Scalar: Zeroize + PrimeFieldBits>>(
-  Zeroizing<Vec<(Id, Vec<(G::Scalar, G)>)>>,
-);
+pub struct BatchVerifier<
+  Id: Copy + Zeroize,
+  G: Zeroize + PrimeGroup<Scalar: Zeroize + PrimeFieldBits>,
+>(Zeroizing<Vec<(Id, Vec<(G::Scalar, G)>)>>);
 
-impl<Id: Copy + Zeroize, G: Zeroize + Group<Scalar: Zeroize + PrimeFieldBits>>
+impl<Id: Copy + Zeroize, G: Zeroize + PrimeGroup<Scalar: Zeroize + PrimeFieldBits>>
   BatchVerifier<Id, G>
 {
   /// Create a new batch verifier, expected to verify the following amount of statements.
@@ -53,6 +55,7 @@ impl<Id: Copy + Zeroize, G: Zeroize + Group<Scalar: Zeroize + PrimeFieldBits>>
 
         // Clears half the bits, maintaining security, to minimize scalar additions
         // Is not practically faster for whatever reason
+        // TODO: This wasn't faster because this is a horrible sketch, try again properly
         /*
         // Generate a random scalar
         let mut repr = G::Scalar::random(&mut *rng).to_repr();
@@ -88,12 +91,6 @@ impl<Id: Copy + Zeroize, G: Zeroize + Group<Scalar: Zeroize + PrimeFieldBits>>
     self.0.push((id, pairs.into_iter().map(|(scalar, point)| (scalar * u, point)).collect()));
   }
 
-  /// Perform batch verification, returning a boolean of if the statements equaled zero.
-  #[must_use]
-  pub fn verify(&self) -> bool {
-    multiexp(&flat(&self.0)).is_identity().into()
-  }
-
   /// Perform batch verification in variable time.
   #[must_use]
   pub fn verify_vartime(&self) -> bool {
@@ -122,23 +119,27 @@ impl<Id: Copy + Zeroize, G: Zeroize + Group<Scalar: Zeroize + PrimeFieldBits>>
       .map(|(id, _)| *id)
   }
 
-  /// Perform constant time batch verification, and if verification fails, identify one faulty
-  /// statement in variable time.
-  pub fn verify_with_vartime_blame(&self) -> Result<(), Id> {
-    if self.verify() {
-      Ok(())
-    } else {
-      Err(self.blame_vartime().unwrap())
-    }
-  }
-
   /// Perform variable time batch verification, and if verification fails, identify one faulty
   /// statement in variable time.
   pub fn verify_vartime_with_vartime_blame(&self) -> Result<(), Id> {
-    if self.verify_vartime() {
-      Ok(())
-    } else {
-      Err(self.blame_vartime().unwrap())
-    }
+    if self.verify_vartime() { Ok(()) } else { Err(self.blame_vartime().unwrap()) }
+  }
+}
+
+impl<
+  Id: Copy + Zeroize,
+  G: Zeroize + ConditionallySelectable + PrimeGroup<Scalar: Zeroize + PrimeFieldBits>,
+> BatchVerifier<Id, G>
+{
+  /// Perform batch verification, returning a boolean of if the statements equaled zero.
+  #[must_use]
+  pub fn verify(&self) -> bool {
+    multiexp(&flat(&self.0)).is_identity().into()
+  }
+
+  /// Perform constant time batch verification, and if verification fails, identify one faulty
+  /// statement in variable time.
+  pub fn verify_with_vartime_blame(&self) -> Result<(), Id> {
+    if self.verify() { Ok(()) } else { Err(self.blame_vartime().unwrap()) }
   }
 }

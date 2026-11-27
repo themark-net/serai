@@ -4,18 +4,21 @@ version = 2
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 
+unsound = "all"
+unmaintained = "all"
 yanked = "deny"
 
 ignore = [
-  "RUSTSEC-2022-0061", # https://github.com/serai-dex/serai/227
-  "RUSTSEC-2024-0370", # proc-macro-error is unmaintained
-  "RUSTSEC-2024-0436", # paste is unmaintained
-  "RUSTSEC-2024-0384", # instant is unmaintained, fixed on `next`
-  "RUSTSEC-2025-0057", # fxhash is unmaintained, fixed with bytecodealliance/wasmtime/pull/11634
+  "RUSTSEC-2024-0436", # `paste` is unmaintained
+  "RUSTSEC-2026-0173", # `proc-macro-error2` is unmaintained
+  "RUSTSEC-2026-0387", # `crypto-bigint 0.5.5` is a transient dependency
 ]
 
 [licenses]
 version = 2
+
+include-dev = true
+include-build = true
 
 allow = [
   # Effective public domain
@@ -24,7 +27,6 @@ allow = [
 
   # Attribution required
   "MIT",
-  "MITNFA",
   "BSD-2-Clause",
   "BSD-3-Clause",
   "ISC",
@@ -33,28 +35,61 @@ allow = [
   "CDLA-Permissive-2.0",
 
   # Non-invasive copyleft
-  # "MPL-2.0", # Commented as it's not currently in-use within the Serai tree
   "Apache-2.0",
   "Apache-2.0 WITH LLVM-exception",
   "GPL-3.0-or-later WITH Classpath-exception-2.0",
 ]
 
 exceptions = [
-  { allow = ["AGPL-3.0-only"], name = "serai-env" },
+  { allow = ["AGPL-3.0-only"], name = "serai-task" },
 
-  { allow = ["AGPL-3.0-only"], name = "ethereum-serai" },
+  { allow = ["AGPL-3.0-only"], name = "ethereum-schnorr-contract" },
   { allow = ["AGPL-3.0-only"], name = "serai-ethereum-relayer" },
 
+  { allow = ["AGPL-3.0-only"], name = "serai-secret-store" },
+  { allow = ["AGPL-3.0-only"], name = "serai-env" },
+
   { allow = ["AGPL-3.0-only"], name = "serai-message-queue" },
+  { allow = ["AGPL-3.0-only"], name = "serai-message-queue-client" },
+  { allow = ["AGPL-3.0-only"], name = "serai-message-queue-server" },
+  { allow = ["AGPL-3.0-only"], name = "serai-message-queue-tests" },
 
   { allow = ["AGPL-3.0-only"], name = "serai-processor-messages" },
-  { allow = ["AGPL-3.0-only"], name = "serai-processor" },
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-primitives" },
 
-  { allow = ["AGPL-3.0-only"], name = "tributary-chain" },
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-key-gen" },
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-frost-attempt-manager" },
+
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-scanner" },
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-scheduler-primitives" },
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-utxo-scheduler-primitives" },
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-utxo-scheduler" },
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-transaction-chaining-scheduler" },
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-smart-contract-scheduler" },
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-signers" },
+
+  { allow = ["AGPL-3.0-only"], name = "serai-bitcoin-processor" },
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-bin" },
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-ethereum-primitives" },
+  { allow = ["AGPL-3.0-only"], name = "serai-ethereum-test-primitives" },
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-ethereum-deployer" },
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-ethereum-router" },
+  { allow = ["AGPL-3.0-only"], name = "serai-processor-ethereum-erc20" },
+  { allow = ["AGPL-3.0-only"], name = "serai-ethereum-processor" },
+  { allow = ["AGPL-3.0-only"], name = "serai-monero-processor" },
+
+  { allow = ["AGPL-3.0-only"], name = "tributary-framework" },
+  { allow = ["AGPL-3.0-only"], name = "serai-cosign-types" },
+  { allow = ["AGPL-3.0-only"], name = "serai-cosign" },
+  { allow = ["AGPL-3.0-only"], name = "serai-coordinator-substrate" },
+  { allow = ["AGPL-3.0-only"], name = "serai-coordinator-tributary" },
+  { allow = ["AGPL-3.0-only"], name = "serai-coordinator-p2p" },
+  { allow = ["AGPL-3.0-only"], name = "serai-coordinator-libp2p-p2p" },
   { allow = ["AGPL-3.0-only"], name = "serai-coordinator" },
 
-  { allow = ["AGPL-3.0-only"], name = "pallet-session" },
+  { allow = ["AGPL-3.0-only"], name = "substrate-median" },
 
+  { allow = ["AGPL-3.0-only"], name = "serai-core-pallet" },
   { allow = ["AGPL-3.0-only"], name = "serai-coins-pallet" },
   { allow = ["AGPL-3.0-only"], name = "serai-dex-pallet" },
 
@@ -74,12 +109,11 @@ exceptions = [
 
   { allow = ["AGPL-3.0-only"], name = "serai-orchestrator" },
 
-  { allow = ["AGPL-3.0-only"], name = "mini-serai" },
-
+  { allow = ["AGPL-3.0-only"], name = "serai-shim-rpc" },
   { allow = ["AGPL-3.0-only"], name = "serai-docker-tests" },
-  { allow = ["AGPL-3.0-only"], name = "serai-message-queue-tests" },
   { allow = ["AGPL-3.0-only"], name = "serai-processor-tests" },
   { allow = ["AGPL-3.0-only"], name = "serai-coordinator-tests" },
+  { allow = ["AGPL-3.0-only"], name = "serai-substrate-tests" },
   { allow = ["AGPL-3.0-only"], name = "serai-full-stack-tests" },
   { allow = ["AGPL-3.0-only"], name = "serai-reproducible-runtime-tests" },
 ]
@@ -97,12 +131,44 @@ multiple-versions = "warn"
 wildcards = "warn"
 highlight = "all"
 deny = [
+  # Contains a non-reproducible binary blob
+  # https://github.com/serde-rs/serde/pull/2514
+  # https://github.com/serde-rs/serde/issues/2575
   { name = "serde_derive", version = ">=1.0.172, <1.0.185" },
+  # Introduced an insecure implementation of `borsh` removed with `0.15.1`
+  # https://github.com/rust-lang/hashbrown/issues/576
   { name = "hashbrown", version = "=0.15.0" },
+  # Incorrect implementation of cSHAKE
+  # https://github.com/RustCrypto/hashes/pull/834
+  { name = "cshake", version = "<0.1.1" },
+  { name = "sha3", version = ">=0.10.2, <0.10.9" },
+  # Incorrect implementation of square roots
+  # https://github.com/RustCrypto/crypto-bigint/issues/1303
+  { name = "crypto-bigint", version = "=0.7.4" },
+
   # Legacy which _no one_ should use anymore
   { name = "is-terminal", version = "*" },
-  # Stop introduction into the tree without realizing it
-  { name = "once_cell_polyfill", version = "*" },
+
+  # Pulls in `no_std_io2`
+  { name = "multihash", version = "=0.19.4" },
+
+  # Conflicts with our usage of mimalloc
+  # https://github.com/serai-dex/serai/issues/690
+  { name = "tikv-jemalloc-sys", version = "*" },
+
+  # https://github.com/libp2p/rust-libp2p/issues/6222
+  { name = "libp2p-floodsub", version = "*" },
+]
+
+[bans.std-replacements]
+scope = "all"
+ignore-rust-version = "all"
+# TODO
+ignore = [
+  "cfg-if",
+  "itoa",
+  "num_cpus",
+  "once_cell",
 ]
 
 [sources]
@@ -110,7 +176,7 @@ unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = [
-  "https://github.com/rust-lang-nursery/lazy-static.rs",
+  "https://github.com/kayabaNerve/elliptic-curves",
   "https://github.com/monero-oxide/monero-oxide",
   "https://github.com/serai-dex/patch-polkadot-sdk",
 ]

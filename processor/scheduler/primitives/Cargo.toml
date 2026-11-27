@@ -1,0 +1,28 @@
+[package]
+name = "serai-processor-scheduler-primitives"
+version = "0.1.0"
+description = "Primitives for schedulers for the Serai processor"
+license = "AGPL-3.0-only"
+repository = "https://github.com/serai-dex/serai/tree/develop/processor/scheduler/primitives"
+authors = ["Luke Parker <lukeparker5132@gmail.com>"]
+keywords = []
+edition = "2024"
+publish = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[package.metadata.cargo-machete]
+ignored = ["borsh"]
+
+[lints]
+workspace = true
+
+[dependencies]
+ciphersuite = { path = "../../../crypto/ciphersuite", default-features = false, features = ["std"] }
+frost = { package = "modular-frost", path = "../../../crypto/frost", default-features = false }
+
+borsh = { version = "1", default-features = false, features = ["std", "derive", "de_strict_order"] }
+
+serai-db = { path = "../../../common/db", default-features = false, features = ["std", "schema"] }

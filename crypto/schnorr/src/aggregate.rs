@@ -1,102 +1,49 @@
-use std_shims::{
-  vec::Vec,
-  io::{self, Read, Write},
-};
+use std_shims::{prelude::*, io};
 
 use zeroize::Zeroize;
 
-use transcript::{Transcript, SecureDigest, DigestTranscript};
+use transcript::{Transcript as _, DigestTranscript};
 
 use ciphersuite::{
   group::{
-    ff::{Field, PrimeField},
-    Group, GroupEncoding,
+    ff::{Field as _, PrimeField as _},
+    Group as _, GroupEncoding as _,
   },
-  Ciphersuite,
+  FromUniformBytes as _, GroupIo, WithPreferredHash,
 };
 use multiexp::multiexp_vartime;
 
 use crate::SchnorrSignature;
 
 // Returns a unbiased scalar weight to use on a signature in order to prevent malleability
-fn weight<D: Send + Clone + SecureDigest, F: PrimeField>(digest: &mut DigestTranscript<D>) -> F {
-  let mut bytes = digest.challenge(b"aggregation_weight");
-  debug_assert_eq!(bytes.len() % 8, 0);
-  // This should be guaranteed thanks to SecureDigest
-  debug_assert!(bytes.len() >= 32);
-
-  let mut res = F::ZERO;
-  let mut i = 0;
-
-  // Derive a scalar from enough bits of entropy that bias is < 2^128
-  // This can't be const due to its usage of a generic
-  // Also due to the usize::try_from, yet that could be replaced with an `as`
-  #[allow(non_snake_case)]
-  let BYTES: usize = usize::try_from((F::NUM_BITS + 128).div_ceil(8)).unwrap();
-
-  let mut remaining = BYTES;
-
-  // We load bits in as u64s
-  const WORD_LEN_IN_BITS: usize = 64;
-  const WORD_LEN_IN_BYTES: usize = WORD_LEN_IN_BITS / 8;
-
-  let mut first = true;
-  while i < remaining {
-    // Shift over the already loaded bits
-    if !first {
-      for _ in 0 .. WORD_LEN_IN_BITS {
-        res += res;
-      }
-    }
-    first = false;
-
-    // Add the next 64 bits
-    res += F::from(u64::from_be_bytes(bytes[i .. (i + WORD_LEN_IN_BYTES)].try_into().unwrap()));
-    i += WORD_LEN_IN_BYTES;
-
-    // If we've exhausted this challenge, get another
-    if i == bytes.len() {
-      bytes = digest.challenge(b"aggregation_weight_continued");
-      remaining -= i;
-      i = 0;
-    }
-  }
-  res
+fn weight<C: WithPreferredHash>(digest: &mut DigestTranscript<C::H>) -> C::F {
+  let bytes = digest.challenge(b"aggregation_weight");
+  C::F::from_uniform_bytes(&bytes.into())
 }
 
 /// Aggregate Schnorr signature as defined in <https://eprint.iacr.org/2021/350>.
-#[allow(non_snake_case)]
+#[expect(non_snake_case)]
 #[derive(Clone, PartialEq, Eq, Debug, Zeroize)]
-pub struct SchnorrAggregate<C: Ciphersuite> {
+pub struct SchnorrAggregate<C: GroupIo + WithPreferredHash> {
   Rs: Vec<C::G>,
   s: C::F,
 }
 
-impl<C: Ciphersuite> SchnorrAggregate<C> {
+impl<C: GroupIo + WithPreferredHash> SchnorrAggregate<C> {
   /// Read a SchnorrAggregate from something implementing Read.
-  pub fn read<R: Read>(reader: &mut R) -> io::Result<Self> {
-    let mut len = [0; 4];
-    reader.read_exact(&mut len)?;
-
-    #[allow(non_snake_case)]
+  pub fn read(mut reader: impl io::Read, len: usize) -> io::Result<Self> {
+    #[expect(non_snake_case)]
     let mut Rs = vec![];
-    for _ in 0 .. u32::from_le_bytes(len) {
-      Rs.push(C::read_G(reader)?);
+    for _ in 0 .. len {
+      Rs.push(C::read_G(&mut reader)?);
     }
 
-    Ok(SchnorrAggregate { Rs, s: C::read_F(reader)? })
+    Ok(SchnorrAggregate { Rs, s: C::read_F(&mut reader)? })
   }
 
   /// Write a SchnorrAggregate to something implementing Write.
-  ///
-  /// This will panic if more than 4 billion signatures were aggregated.
-  pub fn write<W: Write>(&self, writer: &mut W) -> io::Result<()> {
-    writer.write_all(
-      &u32::try_from(self.Rs.len())
-        .expect("more than 4 billion signatures in aggregate")
-        .to_le_bytes(),
-    )?;
-    #[allow(non_snake_case)]
+  pub fn write(&self, mut writer: impl io::Write) -> io::Result<()> {
+    #[expect(non_snake_case)]
     for R in &self.Rs {
       writer.write_all(R.to_bytes().as_ref())?;
     }
@@ -110,7 +57,8 @@ impl<C: Ciphersuite> SchnorrAggregate<C> {
     buf
   }
 
-  #[allow(non_snake_case)]
+  /// The list of nonce commitments within this aggregate signature.
+  #[expect(non_snake_case)]
   pub fn Rs(&self) -> &[C::G] {
     self.Rs.as_slice()
   }
@@ -137,7 +85,7 @@ impl<C: Ciphersuite> SchnorrAggregate<C> {
 
     let mut pairs = Vec::with_capacity((2 * keys_and_challenges.len()) + 1);
     for (i, (key, challenge)) in keys_and_challenges.iter().enumerate() {
-      let z = weight(&mut digest);
+      let z = weight::<C>(&mut digest);
       pairs.push((z, self.Rs[i]));
       pairs.push((z * challenge, *key));
     }
@@ -147,14 +95,13 @@ impl<C: Ciphersuite> SchnorrAggregate<C> {
 }
 
 /// A signature aggregator capable of consuming signatures in order to produce an aggregate.
-#[allow(non_snake_case)]
-#[derive(Clone, Debug, Zeroize)]
-pub struct SchnorrAggregator<C: Ciphersuite> {
+#[derive(Clone, Debug)]
+pub struct SchnorrAggregator<C: GroupIo + WithPreferredHash> {
   digest: DigestTranscript<C::H>,
   sigs: Vec<SchnorrSignature<C>>,
 }
 
-impl<C: Ciphersuite> SchnorrAggregator<C> {
+impl<C: GroupIo + WithPreferredHash> SchnorrAggregator<C> {
   /// Create a new aggregator.
   ///
   /// The DST used here must prevent a collision with whatever hash function produced the
@@ -166,6 +113,10 @@ impl<C: Ciphersuite> SchnorrAggregator<C> {
   }
 
   /// Aggregate a signature.
+  ///
+  /// The challenge must be properly crafted, which means being binding to the public key, nonce,
+  /// and any message. Failure to do so will let a malicious adversary to forge signatures for
+  /// different keys/messages.
   pub fn aggregate(&mut self, challenge: C::F, sig: SchnorrSignature<C>) {
     self.digest.append_message(b"challenge", challenge.to_repr());
     self.sigs.push(sig);
@@ -180,7 +131,7 @@ impl<C: Ciphersuite> SchnorrAggregator<C> {
     let mut aggregate = SchnorrAggregate { Rs: Vec::with_capacity(self.sigs.len()), s: C::F::ZERO };
     for i in 0 .. self.sigs.len() {
       aggregate.Rs.push(self.sigs[i].R);
-      aggregate.s += self.sigs[i].s * weight::<_, C::F>(&mut self.digest);
+      aggregate.s += self.sigs[i].s * weight::<C>(&mut self.digest);
     }
     Some(aggregate)
   }

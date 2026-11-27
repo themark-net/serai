@@ -1,14 +1,18 @@
-#![allow(clippy::needless_pass_by_ref_mut)] // False positives
+#![expect(clippy::needless_pass_by_ref_mut)] // False positives
 
 use std::sync::{OnceLock, Mutex};
 
 use zeroize::Zeroizing;
-use rand_core::{RngCore, OsRng};
 
-use dalek_ff_group::Ristretto;
-use ciphersuite::{group::ff::PrimeField, Ciphersuite};
+use ciphersuite::{
+  group::{ff::PrimeField, GroupEncoding},
+  WrappedGroup,
+};
+use ciphersuite_kp256::Secp256k1;
+use dalek_ff_group::{Ed25519, Ristretto};
+use dkg::*;
 
-use serai_client::primitives::ExternalNetworkId;
+use serai_client::primitives::{ExternalNetworkId, insecure_arbitrary_key_from_name};
 use messages::{ProcessorMessage, CoordinatorMessage};
 use serai_message_queue::{Service, Metadata, client::MessageQueue};
 
@@ -25,13 +29,42 @@ mod tests;
 
 static UNIQUE_ID: OnceLock<Mutex<u16>> = OnceLock::new();
 
+#[expect(dead_code)]
+#[derive(Clone)]
+pub struct EvrfPublicKeys {
+  substrate: [u8; 32],
+  network: Vec<u8>,
+}
+
 pub fn processor_instance(
+  name: &str,
   network: ExternalNetworkId,
   port: u32,
-  message_queue_key: <Ristretto as Ciphersuite>::F,
-) -> Vec<TestBodySpecification> {
-  let mut entropy = [0; 32];
-  OsRng.fill_bytes(&mut entropy);
+  message_queue_key: <Ristretto as WrappedGroup>::F,
+) -> (Vec<TestBodySpecification>, EvrfPublicKeys) {
+  let substrate_evrf_key =
+    insecure_arbitrary_key_from_name::<<Ristretto as EvrfCurve>::EmbeddedCurve>(name);
+  let substrate_evrf_pub_key =
+    (<Ristretto as EvrfCurve>::EmbeddedCurve::generator() * substrate_evrf_key).to_bytes();
+  let substrate_evrf_key = substrate_evrf_key.to_repr();
+
+  let (network_evrf_key, network_evrf_pub_key) = match network {
+    NetworkId::Serai => panic!("starting a processor for Serai"),
+    NetworkId::Bitcoin | NetworkId::Ethereum => {
+      let evrf_key =
+        insecure_arbitrary_key_from_name::<<Secp256k1 as EvrfCurve>::EmbeddedCurve>(name);
+      let pub_key =
+        (<Secp256k1 as EvrfCurve>::EmbeddedCurve::generator() * evrf_key).to_bytes().to_vec();
+      (evrf_key.to_repr(), pub_key)
+    }
+    NetworkId::Monero => {
+      let evrf_key =
+        insecure_arbitrary_key_from_name::<<Ed25519 as EvrfCurve>::EmbeddedCurve>(name);
+      let pub_key =
+        (<Ed25519 as EvrfCurve>::EmbeddedCurve::generator() * evrf_key).to_bytes().to_vec();
+      (evrf_key.to_repr(), pub_key)
+    }
+  };
 
   let network_str = match network {
     ExternalNetworkId::Bitcoin => "bitcoin",
@@ -46,28 +79,29 @@ pub fn processor_instance(
   )
   .replace_env(
     [
-      ("MESSAGE_QUEUE_KEY".to_string(), hex::encode(message_queue_key.to_repr())),
-      ("ENTROPY".to_string(), hex::encode(entropy)),
-      ("NETWORK".to_string(), network_str.to_string()),
-      ("NETWORK_RPC_LOGIN".to_string(), format!("{RPC_USER}:{RPC_PASS}")),
-      ("NETWORK_RPC_PORT".to_string(), port.to_string()),
-      ("DB_PATH".to_string(), "./processor-db".to_string()),
-      ("RUST_LOG".to_string(), "serai_processor=trace,".to_string()),
+      ("MESSAGE_QUEUE_KEY".to_owned(), hex::encode(message_queue_key.to_repr())),
+      ("SUBSTRATE_EVRF_KEY".to_owned(), hex::encode(substrate_evrf_key)),
+      ("NETWORK_EVRF_KEY".to_owned(), hex::encode(network_evrf_key)),
+      ("NETWORK".to_owned(), network_str.to_string()),
+      ("NETWORK_RPC_LOGIN".to_owned(), format!("{RPC_USER}:{RPC_PASS}")),
+      ("NETWORK_RPC_PORT".to_owned(), port.to_string()),
+      ("DB_PATH".to_owned(), "./processor-db".to_owned()),
+      ("RUST_LOG".to_owned(), "serai_processor=trace,".to_owned()),
     ]
     .into(),
   )];
 
   if network == ExternalNetworkId::Ethereum {
-    serai_docker_tests::build("ethereum-relayer".to_string());
+    serai_docker_tests::build("ethereum-relayer".to_owned());
     res.push(
       TestBodySpecification::with_image(
-        Image::with_repository("serai-dev-ethereum-relayer".to_string())
+        Image::with_repository("serai-dev-ethereum-relayer".to_owned())
           .pull_policy(PullPolicy::Never),
       )
       .replace_env(
         [
-          ("DB_PATH".to_string(), "./ethereum-relayer-db".to_string()),
-          ("RUST_LOG".to_string(), "serai_ethereum_relayer=trace,".to_string()),
+          ("DB_PATH".to_owned(), "./ethereum-relayer-db".to_owned()),
+          ("RUST_LOG".to_owned(), "serai_ethereum_relayer=trace,".to_owned()),
         ]
         .into(),
       )
@@ -75,21 +109,27 @@ pub fn processor_instance(
     );
   }
 
-  res
+  (res, EvrfPublicKeys { substrate: substrate_evrf_pub_key, network: network_evrf_pub_key })
+}
+
+pub struct ProcessorKeys {
+  coordinator: <Ristretto as WrappedGroup>::F,
+  evrf: EvrfPublicKeys,
 }
 
 pub type Handles = (String, String, String, String);
 pub fn processor_stack(
+  name: &str,
   network: ExternalNetworkId,
   network_hostname_override: Option<String>,
-) -> (Handles, <Ristretto as Ciphersuite>::F, Vec<TestBodySpecification>) {
+) -> (Handles, ProcessorKeys, Vec<TestBodySpecification>) {
   let (network_composition, network_rpc_port) = network_instance(network);
 
   let (coord_key, message_queue_keys, message_queue_composition) =
     serai_message_queue_tests::instance();
 
-  let mut processor_compositions =
-    processor_instance(network, network_rpc_port, message_queue_keys[&network]);
+  let (mut processor_compositions, evrf_keys) =
+    processor_instance(name, network, network_rpc_port, message_queue_keys[&network]);
 
   // Give every item in this stack a unique ID
   // Uses a Mutex as we can't generate a 8-byte random ID without hitting hostname length limits
@@ -154,7 +194,7 @@ pub fn processor_stack(
       handles[2].clone(),
       handles.get(3).cloned().unwrap_or(String::new()),
     ),
-    coord_key,
+    ProcessorKeys { coordinator: coord_key, evrf: evrf_keys },
     compositions,
   )
 }
@@ -163,11 +203,13 @@ pub struct Coordinator {
   network: ExternalNetworkId,
 
   network_handle: String,
-  #[allow(unused)]
+  #[expect(unused)]
   message_queue_handle: String,
-  #[allow(unused)]
+  #[expect(unused)]
   processor_handle: String,
   relayer_handle: String,
+
+  evrf_keys: EvrfPublicKeys,
 
   next_send_id: u64,
   next_recv_id: u64,
@@ -179,7 +221,7 @@ impl Coordinator {
     network: ExternalNetworkId,
     ops: &DockerOperations,
     handles: Handles,
-    coord_key: <Ristretto as Ciphersuite>::F,
+    keys: ProcessorKeys,
   ) -> Coordinator {
     let rpc = ops.handle(&handles.1).host_port(2287).unwrap();
     let rpc = rpc.0.to_string() + ":" + &rpc.1.to_string();
@@ -192,9 +234,11 @@ impl Coordinator {
       processor_handle: handles.2,
       relayer_handle: handles.3,
 
+      evrf_keys: keys.evrf,
+
       next_send_id: 0,
       next_recv_id: 0,
-      queue: MessageQueue::new(Service::Coordinator, rpc, Zeroizing::new(coord_key)),
+      queue: MessageQueue::new(Service::Coordinator, rpc, Zeroizing::new(keys.coordinator)),
     };
 
     // Sleep for up to a minute in case the external network's RPC has yet to start
@@ -233,7 +277,7 @@ impl Coordinator {
               };
 
               let provider = Arc::new(RootProvider::<_, Ethereum>::new(
-                ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()), true),
+                ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()).unwrap(), true),
               ));
 
               if handle
@@ -298,6 +342,11 @@ impl Coordinator {
     }
 
     res
+  }
+
+  /// Get the eVRF keys for the associated processor.
+  pub fn evrf_keys(&self) -> EvrfPublicKeys {
+    self.evrf_keys.clone()
   }
 
   /// Send a message to a processor as its coordinator.
@@ -368,7 +417,7 @@ impl Coordinator {
         };
 
         let provider = RootProvider::<_, Ethereum>::new(
-          ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()), true),
+          ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()).unwrap(), true),
         );
         let start = provider
           .get_block(BlockNumberOrTag::Latest.into(), BlockTransactionsKind::Hashes)
@@ -460,7 +509,7 @@ impl Coordinator {
 
         let (expected_number, state) = {
           let provider = RootProvider::<_, Ethereum>::new(
-            ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()), true),
+            ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()).unwrap(), true),
           );
 
           let expected_number = provider
@@ -479,7 +528,7 @@ impl Coordinator {
         for coordinator in others {
           let rpc_url = network_rpc(coordinator.network, ops, &coordinator.network_handle);
           let provider = RootProvider::<_, Ethereum>::new(
-            ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()), true),
+            ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()).unwrap(), true),
           );
           assert!(provider
             .raw_request::<_, bool>("anvil_loadState".into(), &[&state])
@@ -556,7 +605,7 @@ impl Coordinator {
         };
 
         let provider = RootProvider::<_, Ethereum>::new(
-          ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()), true),
+          ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()).unwrap(), true),
         );
         let _ = provider.send_raw_transaction(tx).await.unwrap();
       }
@@ -613,7 +662,7 @@ impl Coordinator {
       ExternalNetworkId::Ethereum => {
         /*
         let provider = RootProvider::<_, Ethereum>::new(
-          ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()), true),
+          ClientBuilder::default().transport(SimpleRequest::new(rpc_url.clone()).unwrap(), true),
         );
         let mut hash = [0; 32];
         hash.copy_from_slice(tx);

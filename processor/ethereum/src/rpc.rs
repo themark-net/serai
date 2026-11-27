@@ -1,0 +1,295 @@
+use core::future::Future;
+use std::{
+  sync::{Arc, OnceLock},
+  collections::HashSet,
+};
+
+use alloy_core::primitives::B256;
+use alloy_rpc_types_eth::{Header, BlockNumberOrTag};
+use alloy_transport::{RpcError, TransportErrorKind};
+use alloy_provider::{Provider as _, RootProvider};
+
+use serai_primitives::{network_id::ExternalNetworkId, coin::ExternalCoin, balance::Amount};
+
+use tokio::task::JoinSet;
+
+use serai_db::Db;
+
+use scanner::ScannerFeed;
+
+use ethereum_schnorr::PublicKey;
+use ethereum_router::{InInstruction as EthereumInInstruction, Executed, Router};
+
+use crate::{
+  TOKENS, ETHER_DUST, DAI_DUST, InitialSeraiKey,
+  block::{Epoch, FullEpoch},
+};
+
+#[derive(Clone)]
+pub(crate) struct Rpc<D: 'static + Send + Db> {
+  pub(crate) db: D,
+  pub(crate) provider: Arc<RootProvider>,
+  pub(crate) router: Arc<OnceLock<Router>>,
+}
+
+impl<D: 'static + Send + Db> Rpc<D> {
+  pub(crate) async fn router(&self) -> Result<Router, RpcError<TransportErrorKind>> {
+    let Some(router) = Router::new(
+      self.provider.clone(),
+      &ethereum_schnorr::PublicKey::new(
+        crate::InitialSeraiKey::get(&self.db)
+          .ok_or_else(|| {
+            TransportErrorKind::Custom(
+              "trying to identify the router before the initial key was set".to_owned().into(),
+            )
+          })?
+          .0,
+      )
+      .expect("initial key used by Serai wasn't representable on Ethereum"),
+    )
+    .await?
+    else {
+      Err(TransportErrorKind::Custom("router has yet to be deployed on chain".to_owned().into()))?
+    };
+    Ok(router)
+  }
+}
+
+impl<D: 'static + Send + Db> Rpc<D> {
+  pub(crate) async fn initialize_router(&self) -> Result<(), RpcError<TransportErrorKind>> {
+    if self.router.get().is_none() {
+      let router = self.router().await?;
+      match self.router.set(router) {
+        Ok(()) => {}
+        Err(router) => assert_eq!(router.address(), self.router.get().unwrap().address()),
+      }
+    }
+    Ok(())
+  }
+}
+
+impl<D: 'static + Send + Sync + Db> ScannerFeed for Rpc<D> {
+  const NETWORK: ExternalNetworkId = ExternalNetworkId::Ethereum;
+
+  // We only need one confirmation as Ethereum properly finalizes
+  const CONFIRMATIONS: u64 = 1;
+  // The window length should be roughly an hour
+  const WINDOW_LENGTH: u64 = 10;
+
+  const TEN_MINUTES: u64 = 2;
+
+  type Block = FullEpoch;
+
+  type EphemeralError = RpcError<TransportErrorKind>;
+
+  fn latest_finalized_block_number(
+    &self,
+  ) -> impl Send + Future<Output = Result<u64, Self::EphemeralError>> {
+    async move {
+      /*
+        Because all RPC requests go through this method, we use it to ensure the Router is
+        populated throughout the entire service. While this will represent the chain as offline
+        until the Router is identified, the initial key generation won't require the chain and it's
+        fine to only allow indexing the chain once our Router is deployed.
+      */
+      self.initialize_router().await?;
+
+      let actual_number = self
+        .provider
+        .get_block(BlockNumberOrTag::Finalized.into())
+        .await?
+        .ok_or_else(|| {
+          TransportErrorKind::Custom("there was no finalized block".to_owned().into())
+        })?
+        .header
+        .number;
+      // Error if there hasn't been a full epoch yet
+      if actual_number < 32 {
+        Err(TransportErrorKind::Custom(
+          "there has not been a completed epoch yet".to_owned().into(),
+        ))?;
+      }
+      // The divison by 32 returns the amount of completed epochs
+      // Converting from amount of completed epochs to the latest completed epoch requires
+      // subtracting 1
+      let latest_full_epoch = (actual_number / 32) - 1;
+      Ok(latest_full_epoch)
+    }
+  }
+
+  fn time_of_block(
+    &self,
+    number: u64,
+  ) -> impl Send + Future<Output = Result<u64, Self::EphemeralError>> {
+    async move {
+      // The Scanner should prevent this from being reached, yet the real point is to ensure the
+      // Router is initialized, which is done whenever this method is called
+      if self.latest_finalized_block_number().await? < number {
+        Err(TransportErrorKind::Custom(
+          "requested block time for unfinalized block number".to_owned().into(),
+        ))?;
+      }
+
+      let header = self
+        .provider
+        .get_block(BlockNumberOrTag::Number(number).into())
+        .await?
+        .ok_or_else(|| {
+          TransportErrorKind::Custom(
+            "asked for time of a block our node doesn't have".to_owned().into(),
+          )
+        })?
+        .header;
+      // This is monotonic ever since the merge
+      // https://github.com/ethereum/consensus-specs/blob/4afe39822c9ad9747e0f5635cca117c18441ec1b
+      //   /specs/bellatrix/beacon-chain.md?plain=1#L393-L394
+      // TODO: Check this header was in fact post-merge, if not, falling back to the block number?
+      Ok(header.timestamp)
+    }
+  }
+
+  fn unchecked_block_header_by_number(
+    &self,
+    number: u64,
+  ) -> impl Send
+  + Future<Output = Result<<Self::Block as primitives::Block>::Header, Self::EphemeralError>> {
+    async move {
+      // The Scanner should prevent this from being reached, yet the real point is to ensure the
+      // Router is initialized, which is done whenever this method is called
+      if self.latest_finalized_block_number().await? < number {
+        Err(TransportErrorKind::Custom(
+          "requested block header for unfinalized block number".to_owned().into(),
+        ))?;
+      }
+
+      let start = number * 32;
+      let prior_end_hash = if start == 0 {
+        [0; 32]
+      } else {
+        self
+          .provider
+          .get_block((start - 1).into())
+          .await?
+          .ok_or_else(|| {
+            TransportErrorKind::Custom(
+              format!("ethereum node didn't have requested block: {number:?}. was the node reset?")
+                .into(),
+            )
+          })?
+          .header
+          .hash
+          .into()
+      };
+
+      let end_header = self
+        .provider
+        .get_block((start + 31).into())
+        .await?
+        .ok_or_else(|| {
+          TransportErrorKind::Custom(
+            format!("ethereum node didn't have requested block: {number:?}. was the node reset?")
+              .into(),
+          )
+        })?
+        .header;
+
+      let end_hash = end_header.hash.into();
+
+      Ok(Epoch { prior_end_hash, end_hash })
+    }
+  }
+
+  fn unchecked_block_by_number(
+    &self,
+    number: u64,
+  ) -> impl Send + Future<Output = Result<Self::Block, Self::EphemeralError>> {
+    async move {
+      let epoch = self.unchecked_block_header_by_number(number).await?;
+
+      let Some(router) = Router::new(
+        self.provider.clone(),
+        &PublicKey::new(
+          InitialSeraiKey::get(&self.db).expect("fetching a block yet never confirmed a key").0,
+        )
+        .expect("initial key used by Serai wasn't representable on Ethereum"),
+      )
+      .await?
+      else {
+        Err(TransportErrorKind::Custom("router wasn't deployed on-chain yet".to_owned().into()))?
+      };
+
+      async fn sync_block(
+        router: Router,
+        block: Header,
+      ) -> Result<(Vec<EthereumInInstruction>, Vec<Executed>), RpcError<TransportErrorKind>> {
+        let instructions = router
+          .in_instructions_unordered(block.number ..= block.number, &HashSet::from(TOKENS))
+          .await?;
+
+        let executed = router.executed(block.number ..= block.number).await?;
+
+        Ok((instructions, executed))
+      }
+
+      // We use JoinSet here to minimize the latency of the variety of requests we make. For each
+      // JoinError that may occur, we unwrap it as no underlying tasks should panic
+      let mut join_set = JoinSet::new();
+      let mut to_check = epoch.end_hash;
+      // TODO: This makes 32 sequential requests. We should run them in parallel using block
+      // nunbers
+      while to_check != epoch.prior_end_hash {
+        let to_check_block = self
+          .provider
+          .get_block(B256::from(to_check).into())
+          .await?
+          .ok_or_else(|| {
+            TransportErrorKind::Custom(
+              format!(
+                "ethereum node didn't have requested block: {}. was the node reset?",
+                hex::encode(to_check)
+              )
+              .into(),
+            )
+          })?
+          .header;
+
+        // Update the next block to check
+        to_check = *to_check_block.parent_hash;
+
+        // Spawn a task to sync this block
+        join_set.spawn(sync_block(router.clone(), to_check_block));
+      }
+
+      let mut instructions = vec![];
+      let mut executed = vec![];
+      while let Some(instructions_and_executed) = join_set.join_next().await {
+        let (mut these_instructions, mut these_executed) = instructions_and_executed.unwrap()?;
+        instructions.append(&mut these_instructions);
+        executed.append(&mut these_executed);
+      }
+
+      Ok(FullEpoch { epoch, instructions, executed })
+    }
+  }
+
+  fn dust(coin: ExternalCoin) -> Amount {
+    assert_eq!(coin.network(), ExternalNetworkId::Ethereum);
+    match coin {
+      ExternalCoin::Ether => ETHER_DUST,
+      ExternalCoin::Dai => DAI_DUST,
+      ExternalCoin::Bitcoin | ExternalCoin::Monero => unreachable!(),
+    }
+  }
+
+  fn cost_to_aggregate(
+    &self,
+    coin: ExternalCoin,
+    _reference_block: &Self::Block,
+  ) -> impl Send + Future<Output = Result<Amount, Self::EphemeralError>> {
+    async move {
+      assert_eq!(coin.network(), ExternalNetworkId::Ethereum);
+      // There is no cost to aggregate as we receive to an account
+      Ok(Amount(0))
+    }
+  }
+}

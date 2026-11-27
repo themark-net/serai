@@ -1,26 +1,22 @@
-use core::{ops::Deref, fmt::Debug};
-use std::{
-  io::{self, Read, Write},
-  collections::HashMap,
-};
+use core::ops::Deref as _;
+use std_shims::{prelude::*, io, collections::HashMap};
 
-use rand_core::{RngCore, CryptoRng, SeedableRng};
+use rand_core::{RngCore, CryptoRng, SeedableRng as _};
 use rand_chacha::ChaCha20Rng;
 
 use zeroize::{Zeroize, Zeroizing};
 
-use transcript::Transcript;
+use transcript::Transcript as _;
 
-use ciphersuite::group::{
-  ff::{Field, PrimeField},
-  GroupEncoding,
-};
+use ciphersuite::group::{ff::PrimeField as _, GroupEncoding as _};
+#[cfg(any(test, feature = "tests"))]
+use ciphersuite::group::ff::Field as _;
 use multiexp::BatchVerifier;
 
 use crate::{
   curve::Curve,
   Participant, FrostError, ThresholdParams, ThresholdKeys, ThresholdView,
-  algorithm::{WriteAddendum, Addendum, Algorithm},
+  algorithm::{WriteAddendum as _, Addendum, Algorithm},
   validate_map,
 };
 
@@ -28,8 +24,12 @@ pub(crate) use crate::nonce::*;
 
 /// Trait enabling writing preprocesses and signature shares.
 pub trait Writable {
-  fn write<W: Write>(&self, writer: &mut W) -> io::Result<()>;
+  /// Write to a writer.
+  ///
+  /// This MUST only error if the underlying `writer` errors.
+  fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>;
 
+  /// Serialize to a [`Vec<u8>`].
   fn serialize(&self) -> Vec<u8> {
     let mut buf = vec![];
     self.write(&mut buf).unwrap();
@@ -38,7 +38,7 @@ pub trait Writable {
 }
 
 impl<T: Writable> Writable for Vec<T> {
-  fn write<W: Write>(&self, writer: &mut W) -> io::Result<()> {
+  fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
     for w in self {
       w.write(writer)?;
     }
@@ -66,17 +66,29 @@ impl<C: Curve, A: Algorithm<C>> Params<C, A> {
 }
 
 /// Preprocess for an instance of the FROST signing protocol.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct Preprocess<C: Curve, A: Addendum> {
   pub(crate) commitments: Commitments<C>,
   /// The addendum used by the algorithm.
+  ///
+  /// This MUST NOT be unexpectedly written to.
+  // TODO: Remove public access to this field
   pub addendum: A,
 }
 
+// TODO: Remove
+impl<C: Curve, A: PartialEq + Addendum> PartialEq for Preprocess<C, A> {
+  fn eq(&self, other: &Self) -> bool {
+    let Self { commitments, addendum } = self;
+    (commitments == &other.commitments) && (addendum == &other.addendum)
+  }
+}
+impl<C: Curve, A: PartialEq + Addendum> Eq for Preprocess<C, A> {}
+
 impl<C: Curve, A: Addendum> Writable for Preprocess<C, A> {
-  fn write<W: Write>(&self, writer: &mut W) -> io::Result<()> {
-    self.commitments.write(writer)?;
-    self.addendum.write(writer)
+  fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+    self.commitments.write(&mut *writer)?;
+    self.addendum.write(&mut *writer)
   }
 }
 
@@ -92,19 +104,20 @@ impl<C: Curve, A: Addendum> Writable for Preprocess<C, A> {
 pub struct CachedPreprocess(pub Zeroizing<[u8; 32]>);
 
 /// Trait for the initial state machine of a two-round signing protocol.
-pub trait PreprocessMachine: Send {
+pub trait PreprocessMachine {
   /// Preprocess message for this machine.
-  type Preprocess: Clone + PartialEq + Writable;
+  type Preprocess: Clone + Writable;
   /// Signature produced by this machine.
-  type Signature: Clone + PartialEq + Debug;
+  type Signature: Clone;
   /// SignMachine this PreprocessMachine turns into.
   type SignMachine: SignMachine<Self::Signature, Preprocess = Self::Preprocess>;
 
   /// Perform the preprocessing round required in order to sign.
+  ///
   /// Returns a preprocess message to be broadcast to all participants, over an authenticated
   /// channel.
   fn preprocess<R: RngCore + CryptoRng>(self, rng: &mut R)
-    -> (Self::SignMachine, Self::Preprocess);
+  -> (Self::SignMachine, Self::Preprocess);
 }
 
 /// State machine which manages signing for an arbitrary signature algorithm.
@@ -179,13 +192,23 @@ impl<C: Curve, A: Algorithm<C>> PreprocessMachine for AlgorithmMachine<C, A> {
 }
 
 /// Share of a signature produced via FROST.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct SignatureShare<C: Curve>(C::F);
 impl<C: Curve> Writable for SignatureShare<C> {
-  fn write<W: Write>(&self, writer: &mut W) -> io::Result<()> {
+  fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
     writer.write_all(self.0.to_repr().as_ref())
   }
 }
+
+// TODO: Remove
+impl<C: Curve> PartialEq for SignatureShare<C> {
+  fn eq(&self, other: &Self) -> bool {
+    let Self(share) = self;
+    (*share) == other.0
+  }
+}
+impl<C: Curve> Eq for SignatureShare<C> {}
+
 #[cfg(any(test, feature = "tests"))]
 impl<C: Curve> SignatureShare<C> {
   pub(crate) fn invalidate(&mut self) {
@@ -194,15 +217,15 @@ impl<C: Curve> SignatureShare<C> {
 }
 
 /// Trait for the second machine of a two-round signing protocol.
-pub trait SignMachine<S>: Send + Sync + Sized {
+pub trait SignMachine<S>: Sized {
   /// Params used to instantiate this machine which can be used to rebuild from a cache.
   type Params;
   /// Keys used for signing operations.
   type Keys;
   /// Preprocess message for this machine.
-  type Preprocess: Clone + PartialEq + Writable;
+  type Preprocess: Clone + Writable;
   /// SignatureShare message for this machine.
-  type SignatureShare: Clone + PartialEq + Writable;
+  type SignatureShare: Clone + Writable;
   /// SignatureMachine this SignMachine turns into.
   type SignatureMachine: SignatureMachine<S, SignatureShare = Self::SignatureShare>;
 
@@ -227,13 +250,15 @@ pub trait SignMachine<S>: Send + Sync + Sized {
   ///
   /// Despite taking self, this does not save the preprocess. It must be externally cached and
   /// passed into sign.
-  fn read_preprocess<R: Read>(&self, reader: &mut R) -> io::Result<Self::Preprocess>;
+  fn read_preprocess<R: io::Read>(&self, reader: &mut R) -> io::Result<Self::Preprocess>;
 
   /// Sign a message.
   ///
   /// Takes in the participants' preprocess messages. Returns the signature share to be broadcast
   /// to all participants, over an authenticated channel. The parties who participate here will
   /// become the signing set for this session.
+  ///
+  /// The caller MUST only use preprocesses obtained via this machine's `read_preprocess` function.
   fn sign(
     self,
     commitments: HashMap<Participant, Self::Preprocess>,
@@ -273,10 +298,10 @@ impl<C: Curve, A: Algorithm<C>> SignMachine<A::Signature> for AlgorithmSignMachi
     AlgorithmMachine::new(algorithm, keys).seeded_preprocess(cache)
   }
 
-  fn read_preprocess<R: Read>(&self, reader: &mut R) -> io::Result<Self::Preprocess> {
+  fn read_preprocess<R: io::Read>(&self, reader: &mut R) -> io::Result<Self::Preprocess> {
     Ok(Preprocess {
-      commitments: Commitments::read::<_>(reader, &self.params.algorithm.nonces())?,
-      addendum: self.params.algorithm.read_addendum(reader)?,
+      commitments: Commitments::read(&mut *reader, &self.params.algorithm.nonces())?,
+      addendum: self.params.algorithm.read_addendum(&mut *reader)?,
     })
   }
 
@@ -318,7 +343,7 @@ impl<C: Curve, A: Algorithm<C>> SignMachine<A::Signature> for AlgorithmSignMachi
     }
 
     let nonces = self.params.algorithm.nonces();
-    #[allow(non_snake_case)]
+    #[expect(non_snake_case)]
     let mut B = BindingFactor(HashMap::<Participant, _>::with_capacity(included.len()));
     {
       // Parse the preprocesses
@@ -379,7 +404,7 @@ impl<C: Curve, A: Algorithm<C>> SignMachine<A::Signature> for AlgorithmSignMachi
         .append_message(b"rho_transcript", rho_transcript.challenge(b"merge"));
     }
 
-    #[allow(non_snake_case)]
+    #[expect(non_snake_case)]
     let Rs = B.nonces(&nonces);
 
     let our_binding_factors = B.binding_factors(multisig_params.i());
@@ -412,22 +437,25 @@ impl<C: Curve, A: Algorithm<C>> SignMachine<A::Signature> for AlgorithmSignMachi
 }
 
 /// Trait for the final machine of a two-round signing protocol.
-pub trait SignatureMachine<S>: Send + Sync {
+pub trait SignatureMachine<S> {
   /// SignatureShare message for this machine.
-  type SignatureShare: Clone + PartialEq + Writable;
+  type SignatureShare: Clone + Writable;
 
   /// Read a Signature Share message.
-  fn read_share<R: Read>(&self, reader: &mut R) -> io::Result<Self::SignatureShare>;
+  fn read_share<R: io::Read>(&self, reader: &mut R) -> io::Result<Self::SignatureShare>;
 
   /// Complete signing.
+  ///
   /// Takes in everyone elses' shares. Returns the signature.
+  ///
+  /// The caller MUST only use shares obtained via this machine's `read_shares` function.
   fn complete(self, shares: HashMap<Participant, Self::SignatureShare>) -> Result<S, FrostError>;
 }
 
 /// Final step of the state machine for the signing process.
 ///
 /// This may panic if an invalid algorithm is provided.
-#[allow(non_snake_case)]
+#[expect(non_snake_case)]
 pub struct AlgorithmSignatureMachine<C: Curve, A: Algorithm<C>> {
   params: Params<C, A>,
   view: ThresholdView<C>,
@@ -440,7 +468,7 @@ pub struct AlgorithmSignatureMachine<C: Curve, A: Algorithm<C>> {
 impl<C: Curve, A: Algorithm<C>> SignatureMachine<A::Signature> for AlgorithmSignatureMachine<C, A> {
   type SignatureShare = SignatureShare<C>;
 
-  fn read_share<R: Read>(&self, reader: &mut R) -> io::Result<SignatureShare<C>> {
+  fn read_share<R: io::Read>(&self, reader: &mut R) -> io::Result<SignatureShare<C>> {
     Ok(SignatureShare(C::read_F(reader)?))
   }
 

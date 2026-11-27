@@ -17,13 +17,10 @@ rustdoc-args = ["--cfg", "docsrs"]
 workspace = true
 
 [dependencies]
-log = { version = "0.4", default-features = false, features = ["std"] }
-env_logger = { version = "0.10", default-features = false, features = ["humantime"] }
-
 tokio = { version = "1", default-features = false, features = ["rt", "time", "io-util", "net", "macros"] }
 
-serai-env = { path = "../../../common/env" }
-serai-db = { path = "../../../common/db" }
+serai-db = { path = "../../../common/db", default-features = false, features = ["std", "schema"] }
+serai-env = { path = "../../../secret-store/env" }
 
 [features]
 parity-db = ["serai-db/parity-db"]
