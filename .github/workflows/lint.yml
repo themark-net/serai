@@ -300,7 +300,11 @@ jobs:
 
             # We then find the actual `rust-version` using `cargo-msrv` (again stripping to just the
             # major and minor version).
-            actual=$(cargo msrv find --output-format minimal | grep -Eo "^[0-9]+\.[0-9]+")
+            #
+            # We use the releases actually published to `static.rust-lang.org`, as the default
+            # source (the changelog) can list a release before it's published (such as `1.100.1`),
+            # which `cargo-msrv` will then fail to install.
+            actual=$(cargo msrv find --release-source rust-dist --output-format minimal | grep -Eo "^[0-9]+\.[0-9]+")
 
             # Finally, we compare the two.
             echo "Declared rust-version: $existing"
