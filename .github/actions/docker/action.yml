@@ -15,6 +15,12 @@ runs:
         # Install `uidmap`, required for the explicitly-installed rootless Docker
         sudo apt install -y uidmap
 
+        # Rootless Docker creates `veth` pairs from within a user namespace, which can't load
+        # kernel modules. If the runner image hasn't already loaded `veth` (as the preinstalled
+        # Docker would've when it started a container), every container network fails with
+        # "failed to add the host <=> sandbox pair interfaces: operation not supported".
+        sudo modprobe veth
+
     - name: Install rootless Docker (Linux)
       uses: docker/setup-docker-action@3f1ab1ab0e29231562e4db4ca600c1a49653bac6 # 5.7.0
       if: runner.os == 'Linux'
